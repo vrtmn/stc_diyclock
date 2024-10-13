@@ -750,7 +750,6 @@ int main()
                     kmode = CONF_SW_MMDD ? K_SET_MONTH : K_DATE_DISP;
                 }
                 break;
-#endif
 
             case K_WEEKDAY_DISP:
                 dmode = M_WEEKDAY_DISP;
@@ -768,6 +767,7 @@ int main()
                 else if (ev == EV_S2_SHORT)
                     kmode = K_NORMAL;
 	        break;
+#endif
 
 #ifdef DEBUG
             // To enter DEBUG mode, go to the SECONDS display, then hold S1 and S2 simultaneously.
@@ -934,9 +934,10 @@ int main()
 	  ss = rtc_table[DS_ADDR_SECONDS];
 	  if (ss < 0x20) dmode = M_NORMAL;
 	  else if (ss < 0x25) dmode = M_TEMP_DISP;
+      #ifndef WITHOUT_DATE
 	  else if (ss < 0x30) dmode = M_DATE_DISP;
-	  else if (ss < 0x35) dmode = M_WEEKDAY_DISP;
-	  
+	  else if (ss < 0x35) dmode = M_WEEKDAY_DISP;	  
+      #endif
 	}
 #endif
 
