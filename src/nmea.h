@@ -83,7 +83,7 @@ uint8_t nmea_crc_check()
     return ((((*(++p) - '0') & 0x0f) << 4) & ((*(++p) - '0') & 0x0f)) ^ crc;
 }
 
-void uart1_isr() __interrupt 4 __using 2
+void uart1_isr() __interrupt(4) __using(2)
 {
     char ch;
     char *p;

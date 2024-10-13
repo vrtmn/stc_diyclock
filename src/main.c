@@ -219,7 +219,7 @@ volatile enum Event event;
   Check button status
   Dynamically LED turn on
  */
-void timer0_isr() __interrupt 1 __using 1
+void timer0_isr() __interrupt(1) __using(1)
 {
     uint8_t tmp;
     enum Event ev = EV_NONE;
