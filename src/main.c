@@ -92,6 +92,13 @@ enum display_mode {
 uint8_t hex[] = {0,1,2,3,4,5,6,7,8,9,14,15,16,17,18,19};
 #endif
 
+#define LIGHTVAL_LOWEST_VALUE   4           // Max. brightness
+#define LIGHTVAL_HIGHEST_VALUE  36          // Min. brightness
+
+#define LIGHT_SENSOR_NIGHT_TH   245         // Night mode threshold
+#define LIGHTVAL_NIGHT_VALUE    52          // Night brightness
+#define LIGHT_SENSOR_MAX_VALUE  (255 - (255 - LIGHT_SENSOR_NIGHT_TH))
+
 /* ------------------------------------------------------------------------- */
 /*
 void _delay_ms(uint8_t ms)
@@ -491,11 +498,31 @@ int main()
         // sample adc, run frequently
         if (count % (uint8_t) 4 == 0) {
             temp = gettemp(getADCResult(ADC_TEMP));
-            // auto-dimming, by dividing adc range into 8 steps
-            lightval = getADCResult8(ADC_LIGHT) >> 3;
-            // set floor of dimming range
-            if (lightval < 4) {
-                lightval = 4;
+            
+            /*
+            Auto-dimming
+             The light sensor (getADCResult8(ADC_LIGHT) function)
+             returns 0 at maximum light and 255 in darkness.
+
+            The lightval must must be in the following range:
+             LIGHTVAL_LOWEST_VALUE - highest brightness (default value: 4)
+             LIGHTVAL_DARKEST_VALUE - lowest brightness (it's currently set to 32,
+             may be lower, but the digits will flicker)
+            */ 
+
+            uint8_t adcLight = getADCResult8(ADC_LIGHT);
+            
+            uint8_t lightvalMax = LIGHTVAL_HIGHEST_VALUE;
+
+            // Check for the night mode
+            if (adcLight >= LIGHT_SENSOR_NIGHT_TH) {
+                lightvalMax = LIGHTVAL_NIGHT_VALUE;
+            }
+
+            // Calculate the lightval
+            lightval = adcLight * lightvalMax / LIGHT_SENSOR_MAX_VALUE;
+            if (lightval < LIGHTVAL_LOWEST_VALUE) {
+                lightval = LIGHTVAL_LOWEST_VALUE;
             }
         }
 
