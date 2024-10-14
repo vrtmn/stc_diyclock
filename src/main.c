@@ -816,15 +816,7 @@ int main()
             case K_SEC_DISP:
                 dmode = M_SEC_DISP;
                 if (ev == EV_S1_SHORT) {
-#ifndef WITHOUT_ALARM
-                    count_timeout = TIMEOUT_LONG; // timeout for alarm disp
-                    kmode = K_ALARM;
-#elif !defined(WITHOUT_CHIME)
-                    count_timeout = TIMEOUT_LONG; // timeout for chime disp
-                    kmode = K_CHIME;
-#else
                     kmode = K_NORMAL;
-#endif
                 } else if (ev == EV_S2_LONG) {
                     ds_sec_zero();
 #if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
