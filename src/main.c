@@ -937,6 +937,8 @@ int main()
 
                 if (ev == EV_S1_SHORT)
                     kmode = K_SEC_DISP;
+                else if (ev == EV_S1_LONG)
+                    kmode = K_ALARM;
                 else if (ev == EV_S2_LONG)
                     kmode = K_SET_HOUR;
                 else if (ev == EV_S2_SHORT)
