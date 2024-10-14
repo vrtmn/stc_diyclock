@@ -88,6 +88,63 @@ enum display_mode {
 };
 #define NUM_DEBUG 3
 
+#define MONITOR_S(n) \
+        { \
+            uint8_t s = n - 1; \
+            /* read switch positions into sliding 8-bit window */ \
+            debounce[s] = (debounce[s] << 1) | SW ## n ; \
+            if (debounce[s] == 0) { \
+                /* down for at least 8 ticks */ \
+                S ## n ## _PRESSED = 1; \
+                if (!S ## n ## _LONG) { \
+                    switchcount[s]++; \
+                } \
+            } else { \
+                /* released or bounced */ \
+                if (S ## n ## _PRESSED) { \
+                    if (!S ## n ## _LONG) { \
+                        ev = EV_S ## n ## _SHORT; \
+                    } \
+                    S ## n ## _PRESSED = 0; \
+                    S ## n ## _LONG = 0; \
+                    switchcount[s] = 0; \
+                } \
+            } \
+            if (switchcount[s] > SW_CNTMAX) { \
+                S ## n ## _LONG = 1; \
+                switchcount[s] = 0; \
+                ev = EV_S ## n ## _LONG; \
+            } \
+        }
+
+/*
+// macro expansion for MONITOR_S(1)
+{
+    uint8_t s = 1 - 1;
+    debounce[s] = (debounce[s] << 1) | SW1 ;
+    if (debounce[s] == 0) {
+        S_PRESSED = 1;
+        if (!S_LONG) {
+            switchcount[s]++;
+        }
+    } else {
+        if (S1_PRESSED) {
+            if (!S1_LONG) {
+                ev = EV_S1_SHORT;
+            }
+            S1_PRESSED = 0;
+            S1_LONG = 0;
+            switchcount[s] = 0;
+        }
+    }
+    if (switchcount[s] > SW_CNTMAX) {
+        S1_LONG = 1;
+        switchcount[s] = 0;
+        ev = EV_S1_LONG;
+    }
+}
+*/
+
 #ifdef DEBUG
 uint8_t hex[] = {0,1,2,3,4,5,6,7,8,9,14,15,16,17,18,19};
 #endif
@@ -252,6 +309,7 @@ void timer0_isr() __interrupt(1) __using(1)
     // 100/sec: 10 ms
     if (count_100 == 100) {
         count_100 = 0;
+
 	count_1000++;	//increment every 10ms
 
 #ifndef WITHOUT_CHIME
@@ -265,17 +323,17 @@ void timer0_isr() __interrupt(1) __using(1)
             blinker_fast = !blinker_fast;	//blink every 100ms
             loop_gate = 1;	//every 100ms
 
-	    count_5000++;	//increment every 100ms
+            count_5000++; // increment every 100ms
 #ifndef WITHOUT_ALARM
-	    count_20000++;	//increment every 100ms
+            count_20000++; // increment every 100ms
 #endif
-	    // 2/sec: 500 ms
+            // 2/sec: 500 ms
             if (count_5000 == 5) {
                 count_5000 = 0;
-                blinker_slow = !blinker_slow;	//blink every 500ms
+                blinker_slow = !blinker_slow; // blink every 500ms
 #if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
                 if (!blinker_slow && corr_remaining)
-                    corr_remaining --;
+                    corr_remaining--;
 #endif
 #if defined(WITH_NMEA)
                 if (!blinker_slow && sync_remaining)
@@ -293,36 +351,7 @@ void timer0_isr() __interrupt(1) __using(1)
             }
         }
 
-	// Check SW status and chattering control
-#define MONITOR_S(n) \
-        { \
-            uint8_t s = n - 1; \
-            /* read switch positions into sliding 8-bit window */ \
-            debounce[s] = (debounce[s] << 1) | SW ## n ; \
-            if (debounce[s] == 0) { \
-                /* down for at least 8 ticks */ \
-                S ## n ## _PRESSED = 1; \
-                if (!S ## n ## _LONG) { \
-                    switchcount[s]++; \
-                } \
-            } else { \
-                /* released or bounced */ \
-                if (S ## n ## _PRESSED) { \
-                    if (!S ## n ## _LONG) { \
-                        ev = EV_S ## n ## _SHORT; \
-                    } \
-                    S ## n ## _PRESSED = 0; \
-                    S ## n ## _LONG = 0; \
-                    switchcount[s] = 0; \
-                } \
-            } \
-            if (switchcount[s] > SW_CNTMAX) { \
-                S ## n ## _LONG = 1; \
-                switchcount[s] = 0; \
-                ev = EV_S ## n ## _LONG; \
-            } \
-        }
-
+        // Check SW status and chattering control
         MONITOR_S(1);
         MONITOR_S(2);
 #ifdef stc15w408as
@@ -355,34 +384,6 @@ void timer0_isr() __interrupt(1) __using(1)
     }
 #endif
 }
-
-/*
-// macro expansion for MONITOR_S(1)
-{
-    uint8_t s = 1 - 1;
-    debounce[s] = (debounce[s] << 1) | SW1 ;
-    if (debounce[s] == 0) {
-        S_PRESSED = 1;
-        if (!S_LONG) {
-            switchcount[s]++;
-        }
-    } else {
-        if (S1_PRESSED) {
-            if (!S1_LONG) {
-                ev = EV_S1_SHORT;
-            }
-            S1_PRESSED = 0;
-            S1_LONG = 0;
-            switchcount[s] = 0;
-        }
-    }
-    if (switchcount[s] > SW_CNTMAX) {
-        S1_LONG = 1;
-        switchcount[s] = 0;
-        ev = EV_S1_LONG;
-    }
-}
-*/
 
 // Call timer0_isr() 10000/sec: 0.0001 sec
 // Initialize the timer count so that it overflows after 0.0001 sec
@@ -581,9 +582,9 @@ int main()
             alarm_hh_bcd = ds_int2bcd(alarm_hh_bcd);
             alarm_mm_bcd = ds_int2bcd(alarm_mm_bcd);
 
-	    snooze_time = 0;
+            snooze_time = 0;
 #endif
-	    cfg_changed = 0;
+            cfg_changed = 0;
         }
 #endif // !defined(WITHOUT_ALARM) || !defined(WITHOUT_CHIME)
 
@@ -615,7 +616,7 @@ int main()
 
 #ifndef WITHOUT_ALARM
         // check for alarm trigger
-	// when snooze_time>0, just compare min portion
+	    // when snooze_time>0, just compare min portion
         if ((snooze_time == 0 && (alarm_hh_bcd == rtc_hh_bcd && alarm_mm_bcd == rtc_mm_bcd && alarm_pm == rtc_pm))
 	     || (snooze_time>0 && (alarm_mm_snooze == rtc_mm_bcd)) ) {
             if (CONF_ALARM_ON && !alarm_trigger && !alarm_reset) {
@@ -627,34 +628,36 @@ int main()
         }
 
         // S1 or S2 to stop alarm
-	// Snooze by pushing S1
+	    // Snooze by pushing S1
         if (alarm_trigger && !alarm_reset) {
             if (ev == EV_S1_SHORT) {
-	      //set snooze
+                // set snooze
                 alarm_trigger = 0;
-		snooze_time += 5;	//next alarm as 5min later
-		//stop snooze after 1hour passing from the first alarm
-		if (snooze_time>60) snooze_time=0;
-		
-		//need BCD calculation
-		alarm_mm_snooze = add_BCD(ds_int2bcd(snooze_time));
-		
-		if (alarm_mm_snooze > 0x59) alarm_mm_snooze = alarm_mm_snooze - 0x60;
+                snooze_time += 5; // next alarm as 5min later
+                // stop snooze after 1hour passing from the first alarm
+                if (snooze_time > 60)
+                    snooze_time = 0;
+
+                // need BCD calculation
+                alarm_mm_snooze = add_BCD(ds_int2bcd(snooze_time));
+
+                if (alarm_mm_snooze > 0x59)
+                    alarm_mm_snooze = alarm_mm_snooze - 0x60;
+
                 ev = EV_NONE;
-	    }
+            }
             else if (ev == EV_S2_SHORT) {
                 alarm_reset = 1;
                 alarm_trigger = 0;
                 ev = EV_NONE;
-		snooze_time = 0;
+                snooze_time = 0;
             }
         }
 #endif
 
-	/////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////
         // keyboard decision tree
         switch (kmode) {
-
             case K_SET_HOUR:
                 flash_01 = 1;
                 if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
@@ -734,7 +737,7 @@ int main()
 #endif
             case K_TEMP_DISP:
                 dmode = M_TEMP_DISP;
-                if (ev == EV_S1_SHORT)
+                if (ev == EV_S1_SHORT) 
                     ds_temperature_offset_incr();
                 else if (ev == EV_S1_LONG)
                     ds_temperature_cf_toggle();
@@ -783,7 +786,6 @@ int main()
                 if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
                     ds_weekday_incr();
                 else if (ev == EV_S2_SHORT)
-		    // next mode is year_disp
                     kmode = K_YEAR_DISP;
                 break;
 
@@ -793,7 +795,7 @@ int main()
                     ds_year_incr();
                 else if (ev == EV_S2_SHORT)
                     kmode = K_NORMAL;
-	        break;
+                break;
 #endif
 
 #ifdef DEBUG
@@ -942,24 +944,23 @@ int main()
 #endif
         };
 
-	/////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////
         // display execution tree
 
         clearTmpDisplay();
 
-	dmode_bak = dmode;
+        dmode_bak = dmode;
 
 #ifdef SHOW_TEMP_DATE_WEEKDAY
-	if (dmode == M_NORMAL && kmode == K_NORMAL) {
-
-	  ss = rtc_table[DS_ADDR_SECONDS];
-	  if (ss < 0x20) dmode = M_NORMAL;
-	  else if (ss < 0x25) dmode = M_TEMP_DISP;
-      #ifndef WITHOUT_DATE
-	  else if (ss < 0x30) dmode = M_DATE_DISP;
-	  else if (ss < 0x35) dmode = M_WEEKDAY_DISP;	  
-      #endif
-	}
+        if (dmode == M_NORMAL && kmode == K_NORMAL) {
+            ss = rtc_table[DS_ADDR_SECONDS];
+            if (ss < 0x20) dmode = M_NORMAL;
+            else if (ss < 0x25) dmode = M_TEMP_DISP;
+            #ifndef WITHOUT_DATE
+                else if (ss < 0x30) dmode = M_DATE_DISP;
+                else if (ss < 0x35) dmode = M_WEEKDAY_DISP;	  
+            #endif
+        }
 #endif
 
 #if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
@@ -1127,35 +1128,35 @@ int main()
 #endif
 
             case M_WEEKDAY_DISP:
-	      {
-	      uint8_t wd;
- 
-	      wd = rtc_table[DS_ADDR_WEEKDAY]-1;
+            {
+                uint8_t wd;
 
-	      filldisplay(1, weekDay[wd][0]-'A'+LED_a, 0);
-	      filldisplay(2, weekDay[wd][1]-'A'+LED_a, 0);
-	      filldisplay(3, weekDay[wd][2]-'A'+LED_a, 0);
-	      
-	      dot3display(0);
+                wd = rtc_table[DS_ADDR_WEEKDAY] - 1;
+
+                filldisplay(1, weekDay[wd][0] - 'A' + LED_a, 0);
+                filldisplay(2, weekDay[wd][1] - 'A' + LED_a, 0);
+                filldisplay(3, weekDay[wd][2] - 'A' + LED_a, 0);
+
+                dot3display(0);
 	      }
 	      break;
 
-            case M_YEAR_DISP:
-	      //fix upper 2 digit as 20
-	      filldisplay(0, 2, 0);
-	      filldisplay(1, 0, 0);
-	      
-	      filldisplay(2,(rtc_table[DS_ADDR_YEAR] >> 4) & (DS_MASK_YEAR_TENS >> 4), 0);
-	      filldisplay(3, rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR_UNITS, 0);
-	      break;
-	      
-            case M_TEMP_DISP:
-                filldisplay( 0, ds_int2bcd_tens(temp), 0);
-                filldisplay( 1, ds_int2bcd_ones(temp), 0);
-                filldisplay( 2, CONF_C_F ? LED_f : LED_c, 1);
-                // if (temp<0) filldisplay( 3, LED_DASH, 0);  -- temp defined as uint16, cannot be <0
-                dot3display(0);
-                break;
+          case M_YEAR_DISP:
+              // fix upper 2 digit as 20
+              filldisplay(0, 2, 0);
+              filldisplay(1, 0, 0);
+
+              filldisplay(2, (rtc_table[DS_ADDR_YEAR] >> 4) & (DS_MASK_YEAR_TENS >> 4), 0);
+              filldisplay(3, rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR_UNITS, 0);
+              break;
+
+          case M_TEMP_DISP:
+              filldisplay(0, ds_int2bcd_tens(temp), 0);
+              filldisplay(1, ds_int2bcd_ones(temp), 0);
+              filldisplay(2, CONF_C_F ? LED_f : LED_c, 1);
+              // if (temp<0) filldisplay( 3, LED_DASH, 0);  -- temp defined as uint16, cannot be <0
+              dot3display(0);
+              break;
 
 #ifdef DEBUG
             case M_DEBUG:
@@ -1197,7 +1198,7 @@ int main()
 #endif
         }
 
-	dmode = dmode_bak;	// back to original dmode
+        dmode = dmode_bak; // back to original dmode
 
 #ifndef WITHOUT_ALARM
         if (alarm_trigger && !alarm_reset) {
