@@ -825,7 +825,7 @@ int main()
 #else
                     kmode = K_NORMAL;
 #endif
-                } else if (ev == EV_S2_SHORT) {
+                } else if (ev == EV_S2_LONG) {
                     ds_sec_zero();
 #if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
                     corr_remaining = RUNTIME_PER_SEC;
