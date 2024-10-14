@@ -1084,9 +1084,16 @@ int main()
 #endif
 
             case M_SEC_DISP:
+            #ifdef SHOW_MINUTES_WITH_SECONDS
+                uint8_t mm = rtc_mm_bcd;
+                filldisplay(0, mm >> 4, 0);
+                filldisplay(1, mm & 0x0F, blinker_slow);
+            #else
                 dotdisplay(0, 0);
                 dotdisplay(1, blinker_slow);
-                filldisplay(2,(rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), blinker_slow);
+            #endif
+            
+                filldisplay(2, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), blinker_slow);
                 filldisplay(3, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
                 dot3display(0);
                 break;
