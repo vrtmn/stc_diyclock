@@ -1,5 +1,16 @@
 # STC DIY Clock Kit firmware
 
+## Update from 15.10.2024:
+
+- Improved auto-dimming logic
+- Resetting seconds by S2 long
+- Switching to alarm mode by S1 long
+- Added the ability to display minutes along with seconds
+- Fixed compilation error when WITHOUT_DATE is defined
+
+
+## Original file:
+
 Firmware replacement for STC15F mcu-based DIY Clock Kit (available from banggood [see below for link], aliexpress, et al.) Uses [sdcc](http://sdcc.sf.net) to build and [stcgal](https://github.com/grigorig/stcgal) to flash firmware on to STC15F204EA (and STC15W408AS) series microcontroller.
 
 ![Image of Banggood SKU972289](http://img.banggood.com/thumb/large/2014/xiemeijuan/03/SKU203096/A3.jpg?p=WX0407753399201409DA)
