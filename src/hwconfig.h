@@ -6,6 +6,8 @@
 #ifndef HWCONFIG_H
 #define HWCONFIG_H
 
+#include "models.h"
+
 /*
     HW_MODEL_C described @
     https://github.com/zerog2k/stc_diyclock/issues/20
@@ -48,7 +50,13 @@
 #endif
 
 // setup macro mask to turn off digits
-#define LED_DIGITS_OFF()    ( LED_DIGITS_PORT |= (0b1111 << LED_DIGITS_PORT_BASE))
+#ifdef SIX_DIGITS
+#define DIGITS_MASK 0b111111
+#else
+#define DIGITS_MASK 0b1111
+#endif
+#define LED_DIGITS_OFF()    ( LED_DIGITS_PORT |= (DIGITS_MASK << LED_DIGITS_PORT_BASE))
+
 // setup macro to turn on single digit
 #define LED_DIGIT_ON(digit) (LED_DIGITS_PORT &= ~((1<<LED_DIGITS_PORT_BASE) << digit))
 
@@ -87,6 +95,12 @@
  // needed for asm optimizations
  #define _DS_IO   _P1_1
  #define _DS_SCLK _P1_2
+#endif
+
+#ifdef SIX_DIGITS
+#define NUMBER_OF_DIGITS 6
+#else
+#define NUMBER_OF_DIGITS 4
 #endif
 
 #endif

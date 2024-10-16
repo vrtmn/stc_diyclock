@@ -133,22 +133,37 @@ const char weekDay[][4] = {
       "SAT",
 };
 
-uint8_t tmpbuf[4];
+uint8_t tmpbuf[NUMBER_OF_DIGITS];
+uint8_t dbuf[NUMBER_OF_DIGITS];
+
 __bit   dot0;
 __bit   dot1;
 __bit   dot2;
 __bit   dot3;
-
-uint8_t dbuf[4];
-
-#define clearTmpDisplay() { dot0=0; dot1=0; dot2=0; dot3=0; tmpbuf[0]=tmpbuf[1]=tmpbuf[2]=tmpbuf[3]=LED_BLANK; }
+#ifdef SIX_DIGITS
+__bit   dot4;
+__bit   dot5;
+#endif
 
 #define filldisplay(pos,val,dp) { tmpbuf[pos]=(uint8_t)(val); if (dp) dot##pos=1;}
 #define dotdisplay(pos,dp) { if (dp) dot##pos=1;}
+
+#ifdef SIX_DIGITS
+#define clearTmpDisplay() { dot0=0; dot1=0; dot2=0; dot3=0; dot4=0; dot5=0; tmpbuf[0]=tmpbuf[1]=tmpbuf[2]=tmpbuf[3]=tmpbuf[4]=tmpbuf[5]=LED_BLANK; }
+
+#define updateTmpDisplay() { uint8_t tmp; \
+                        tmp=ledtable[tmpbuf[0]]; if (dot0) tmp&=0x7F; dbuf[0]=tmp; \
+                        tmp=ledtable[tmpbuf[1]]; if (dot1) tmp&=0x7F; dbuf[1]=tmp; \
+                        tmp=ledtable[tmpbuf[3]]; if (dot3) tmp&=0x7F; dbuf[3]=tmp; \
+                        tmp=ledtable2[tmpbuf[2]]; if (dot2) tmp&=0x7F; dbuf[2]=tmp; \
+                        tmp=ledtable2[tmpbuf[4]]; if (dot4) tmp&=0x7F; dbuf[4]=tmp; \
+                        tmp=ledtable2[tmpbuf[5]]; if (dot5) tmp&=0x7F; dbuf[5]=tmp; }
+#else                        
+#define clearTmpDisplay() { dot0=0; dot1=0; dot2=0; dot3=0; tmpbuf[0]=tmpbuf[1]=tmpbuf[2]=tmpbuf[3]=LED_BLANK; }
 
 #define updateTmpDisplay() { uint8_t tmp; \
                         tmp=ledtable[tmpbuf[0]]; if (dot0) tmp&=0x7F; dbuf[0]=tmp; \
                         tmp=ledtable[tmpbuf[1]]; if (dot1) tmp&=0x7F; dbuf[1]=tmp; \
                         tmp=ledtable[tmpbuf[3]]; if (dot3) tmp&=0x7F; dbuf[3]=tmp; \
                         tmp=ledtable2[tmpbuf[2]]; if (dot2) tmp&=0x7F; dbuf[2]=tmp; }
-                        
+#endif

@@ -14,19 +14,20 @@
 #include "led.h"
 
 #define FOSC    11059200
-//#define DEBUG
 
 // clear wdt
 #define WDT_CLEAR()    (WDT_CONTR |= 1 << 4)
 
 // hardware configuration
 #include "hwconfig.h"
+#include "models.h"
 
 // keyboard mode states
 enum keyboard_mode {
     K_NORMAL,
     K_SET_HOUR,
     K_SET_MINUTE,
+    K_SET_SECOND,
     K_SET_HOUR_12_24,
 #ifdef WITH_NMEA
     K_TZ_SET_HOUR,
@@ -39,9 +40,13 @@ enum keyboard_mode {
     K_DATE_DISP,
     K_SET_MONTH,
     K_SET_DAY,
+#ifdef SIX_DIGITS
+    K_SET_YEAR,
+#else
     K_YEAR_DISP,
 #endif
     K_WEEKDAY_DISP,
+#endif
 #ifndef WITHOUT_ALARM
     K_ALARM,
     K_ALARM_SET_HOUR,
@@ -67,13 +72,15 @@ enum display_mode {
     M_TZ_SET_TIME,
     M_TZ_SET_DST,
 #endif
+#ifndef SIX_DIGITS
     M_SEC_DISP,
+#endif
     M_TEMP_DISP,
 #ifndef WITHOUT_DATE
     M_DATE_DISP,
-#endif
     M_WEEKDAY_DISP,
     M_YEAR_DISP,
+#endif
 #ifndef WITHOUT_ALARM
     M_ALARM,
 #endif
@@ -205,6 +212,9 @@ uint8_t dmode_bak = M_NORMAL;
 
 __bit  flash_01;
 __bit  flash_23;
+#ifdef SIX_DIGITS
+__bit  flash_45;
+#endif
 
 uint8_t rtc_hh_bcd;
 uint8_t rtc_mm_bcd;
@@ -289,13 +299,13 @@ void timer0_isr() __interrupt(1) __using(1)
     enum Event ev = EV_NONE;
     // display refresh ISR
     // cycle thru digits one at a time
-    uint8_t digit = displaycounter % (uint8_t) 4;
+    uint8_t digit = displaycounter % (uint8_t) NUMBER_OF_DIGITS;
 
     // turn off all digits, set high
     LED_DIGITS_OFF();
 
     // auto dimming, skip lighting for some cycles
-    if (displaycounter % lightval < 4 ) {
+    if (displaycounter % lightval < NUMBER_OF_DIGITS) {
         // fill digits
         LED_SEGMENT_PORT = dbuf[digit];
         // turn on selected digit, set low
@@ -427,9 +437,8 @@ int8_t gettemp(uint16_t raw) {
     return temp + (cfg_table[CFG_TEMP_BYTE] & CFG_TEMP_MASK) - 4;
 }
 
-//3rd LED's dot display. Blink pattern is set when alarm is set.
-void dot3display(__bit pm)
-{
+uint8_t preparepm(uint8_t pm)
+{    
 #ifndef WITHOUT_ALARM
     // dot 3: If alarm is on, blink for 500 ms every 2000 ms
     //        If 12h: on if pm when not blinking
@@ -440,7 +449,20 @@ void dot3display(__bit pm)
         pm = blinker_fast;
     }
 #endif
+return pm;
+}
+
+//3rd LED's dot display. Blink pattern is set when alarm is set.
+void dot3display(__bit pm)
+{
+    pm = preparepm(pm);
     dotdisplay(3, pm);
+}
+
+void dot5display(__bit pm)
+{
+    pm = preparepm(pm);
+    dotdisplay(5, pm);
 }
 
 #ifndef WITHOUT_ALARM
@@ -672,6 +694,22 @@ int main()
                 if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
                     ds_minutes_incr();
                 else if (ev == EV_S2_SHORT)
+                #ifdef SIX_DIGITS
+                    kmode = K_SET_SECOND;
+                #else
+                    kmode = K_SET_HOUR_12_24;
+                #endif
+                break;
+
+            case K_SET_SECOND:
+                flash_01 = 0;
+                flash_23 = 0;
+#ifdef SIX_DIGITS                
+                flash_45 = 1;
+#endif                
+                if (ev == EV_S1_SHORT)
+                    ds_sec_zero();
+                else if (ev == EV_S2_SHORT)
                     kmode = K_SET_HOUR_12_24;
                 break;
 
@@ -742,10 +780,10 @@ int main()
                 else if (ev == EV_S1_LONG)
                     ds_temperature_cf_toggle();
                 else if (ev == EV_S2_SHORT) {
-#ifndef WITHOUT_DATE
-                    kmode = K_DATE_DISP;
+#ifdef WITHOUT_DATE
+                    kmode = K_NORMAL;
 #else
-                    kmode = K_WEEKDAY_DISP;
+                    kmode = K_DATE_DISP;
 #endif
                 }
                 break;
@@ -755,7 +793,7 @@ int main()
                 dmode = M_DATE_DISP;
                 if (ev == EV_S1_SHORT)
                     ds_date_mmdd_toggle();
-                else if (ev == EV_S1_LONG)
+                else if (ev == EV_S2_LONG)
                     kmode = CONF_SW_MMDD ? K_SET_DAY : K_SET_MONTH;
                 else if (ev == EV_S2_SHORT)
                     kmode = K_WEEKDAY_DISP;
@@ -763,39 +801,65 @@ int main()
 
             case K_SET_MONTH:
                 flash_01 = 1;
-                if (ev == EV_S2_SHORT || (S2_LONG && blinker_fast))
+                if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
                     ds_month_incr();
-                else if (ev == EV_S1_SHORT) {
+                else if (ev == EV_S2_SHORT) {
                     flash_01 = 0;
+#ifdef SIX_DIGITS
+                    kmode = CONF_SW_MMDD ? K_SET_YEAR : K_SET_DAY;
+#else                    
                     kmode = CONF_SW_MMDD ? K_DATE_DISP : K_SET_DAY;
+#endif
                 }
                 break;
 
             case K_SET_DAY:
                 flash_23 = 1;
-                if (ev == EV_S2_SHORT || (S2_LONG && blinker_fast))
+                if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
                     ds_day_incr();
-                else if (ev == EV_S1_SHORT) {
+                else if (ev == EV_S2_SHORT) {
                     flash_23 = 0;
+#ifdef SIX_DIGITS
+                    kmode = CONF_SW_MMDD ? K_SET_MONTH : K_SET_YEAR;
+#else                    
                     kmode = CONF_SW_MMDD ? K_SET_MONTH : K_DATE_DISP;
+#endif
                 }
                 break;
+
+#ifdef SIX_DIGITS
+            case K_SET_YEAR:
+                flash_45 = 1;
+                if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
+                    ds_year_incr();
+                else if (ev == EV_S2_SHORT) {
+                    flash_45 = 0;
+                    kmode = K_NORMAL;
+                }
+                break;
+#endif
 
             case K_WEEKDAY_DISP:
                 dmode = M_WEEKDAY_DISP;
                 if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
                     ds_weekday_incr();
                 else if (ev == EV_S2_SHORT)
+#ifdef SIX_DIGITS
+                    kmode = K_NORMAL;
+#else
                     kmode = K_YEAR_DISP;
+#endif
                 break;
 
-	    case K_YEAR_DISP:
+#ifndef SIX_DIGITS
+            case K_YEAR_DISP:
                 dmode = M_YEAR_DISP;
                 if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
                     ds_year_incr();
                 else if (ev == EV_S2_SHORT)
                     kmode = K_NORMAL;
                 break;
+#endif
 #endif
 
 #ifdef DEBUG
@@ -815,6 +879,7 @@ int main()
                 break;
 #endif
 
+#ifndef SIX_DIGITS
             case K_SEC_DISP:
                 dmode = M_SEC_DISP;
                 if (ev == EV_S1_SHORT) {
@@ -830,11 +895,15 @@ int main()
                     kmode = K_DEBUG;
 #endif
                 break;
+#endif
 
 #ifndef WITHOUT_ALARM
             case K_ALARM:
                 flash_01 = 0;
                 flash_23 = 0;
+#ifdef SIX_DIGITS                                
+                flash_45 = 0;
+#endif                
                 dmode = M_ALARM;
                 if (ev == EV_TIMEOUT)
                     kmode = K_NORMAL;
@@ -884,6 +953,9 @@ int main()
             case K_CHIME:
                 flash_01 = 0;
                 flash_23 = 0;
+#ifdef SIX_DIGITS                
+                flash_45 = 0;
+#endif                
                 dmode = M_CHIME;
                 if (ev == EV_S1_SHORT || ev == EV_TIMEOUT) {
                     kmode = K_NORMAL;
@@ -924,15 +996,28 @@ int main()
             default:
                 flash_01 = 0;
                 flash_23 = 0;
+#ifdef SIX_DIGITS                                
+                flash_45 = 0;
+#endif                
 
                 dmode = M_NORMAL;
                 if (count_timeout)
                     count_timeout = 0; // no timeout for normal (time display) mode
 
                 if (ev == EV_S1_SHORT)
-                    kmode = K_SEC_DISP;
-                else if (ev == EV_S1_LONG)
+                {
+#ifdef SIX_DIGITS
                     kmode = K_ALARM;
+#else
+                    kmode = K_SEC_DISP;
+#endif
+                }
+                else if (ev == EV_S1_LONG)
+                {
+#ifndef SIX_DIGITS
+                    kmode = K_ALARM;
+#endif
+                }
                 else if (ev == EV_S2_LONG)
                     kmode = K_SET_HOUR;
                 else if (ev == EV_S2_SHORT)
@@ -951,17 +1036,31 @@ int main()
 
         dmode_bak = dmode;
 
-#ifdef SHOW_TEMP_DATE_WEEKDAY
         if (dmode == M_NORMAL && kmode == K_NORMAL) {
             ss = rtc_table[DS_ADDR_SECONDS];
-            if (ss < 0x20) dmode = M_NORMAL;
-            else if (ss < 0x25) dmode = M_TEMP_DISP;
-            #ifndef WITHOUT_DATE
-                else if (ss < 0x30) dmode = M_DATE_DISP;
-                else if (ss < 0x35) dmode = M_WEEKDAY_DISP;	  
-            #endif
-        }
+            if (ss < 0x20) 
+            {
+                dmode = M_NORMAL;
+            }
+#ifdef AUTO_SHOW_TEMPERATURE
+            else if (ss < 0x25) 
+            {
+                dmode = M_TEMP_DISP;
+            }
 #endif
+#if !defined(WITHOUT_DATE) && defined(AUTO_SHOW_DATE)
+            else if (ss < 0x30)
+            {
+                dmode = M_DATE_DISP;
+            }
+#endif
+#if !defined(WITHOUT_DATE) && defined(AUTO_SHOW_WEEKDAY)
+            else if (ss < 0x35)
+            {
+                dmode = M_WEEKDAY_DISP;
+            }
+#endif
+        }
 
 #if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
         if (!corr_remaining && rtc_table[DS_ADDR_SECONDS] == 0x51) {
@@ -1020,8 +1119,33 @@ int main()
                     } else
 #endif
                     filldisplay(2, mm >> 4, 0);
+#ifdef SIX_DIGITS
+                    filldisplay(3, mm & 0x0F, dmode == M_NORMAL ? blinker_slow : 0);
+#else
                     filldisplay(3, mm & 0x0F, 0);
+#endif
                 }
+
+#ifdef SIX_DIGITS
+                if (!flash_45 || blinker_fast || S1_LONG) {                    
+                    if (dmode == M_NORMAL)
+                    {
+                        filldisplay(4, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), blinker_slow);
+                        filldisplay(5, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
+                    } else if (dmode == M_ALARM) {
+                        // Show letter 'A' for the alarm mode
+                        filldisplay(5, LED_a, 0);
+                    }
+#ifndef WITHOUT_CHIME
+                    else if (dmode == M_CHIME)
+                    {
+                        // Show letter 'A' for the alarm mode
+                        filldisplay(5, LED_c, 0);
+                    }
+#endif
+                }
+#endif
+
                 if (blinker_slow || dmode != M_NORMAL) {
 #ifndef WITHOUT_CHIME
                     if (dmode != M_CHIME) {
@@ -1034,11 +1158,19 @@ int main()
                 }
 #ifndef WITHOUT_CHIME
                 if (dmode == M_CHIME) {
+#ifdef SIX_DIGITS
+                    dotdisplay(4, CONF_CHIME_ON);
+#else
                     dotdisplay(2, CONF_CHIME_ON);
+#endif                    
                     dotdisplay(1, chime_ss_pm);
                 }
 #endif
+#ifdef SIX_DIGITS
+                dot5display(pm);
+#else
                 dot3display(pm);
+#endif
                 break;
             }
             case M_SET_HOUR_12_24:
@@ -1084,6 +1216,7 @@ int main()
                 break;
 #endif
 
+#ifndef SIX_DIGITS
             case M_SEC_DISP:
             #ifdef SHOW_MINUTES_WITH_SECONDS
                 uint8_t mm = rtc_mm_bcd;
@@ -1098,10 +1231,11 @@ int main()
                 filldisplay(3, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
                 dot3display(0);
                 break;
+#endif
 
 #ifndef WITHOUT_DATE
             case M_DATE_DISP:
-                if (!flash_01 || blinker_fast || S2_LONG) {
+                if (!flash_01 || blinker_fast || S1_LONG) {
                     if (!CONF_SW_MMDD) {
                         filldisplay( 0, rtc_table[DS_ADDR_MONTH] >> 4, 0);// tenmonth ( &MASK_TENS useless, as MSB bits are read as '0')
                         filldisplay( 1, rtc_table[DS_ADDR_MONTH] & DS_MASK_MONTH_UNITS, 0);
@@ -1112,7 +1246,7 @@ int main()
                     }
                 }
 
-                if (!flash_23 || blinker_fast || S2_LONG) {
+                if (!flash_23 || blinker_fast || S1_LONG) {
                     if (!CONF_SW_MMDD) {
                         filldisplay( 2, rtc_table[DS_ADDR_DAY] >> 4, 0); // tenday   ( &MASK_TENS useless)
                         filldisplay( 3, rtc_table[DS_ADDR_DAY] & DS_MASK_DAY_UNITS, 0);     // day
@@ -1123,10 +1257,19 @@ int main()
                     }
                 }
                 dotdisplay(1, 1);
+#ifdef SIX_DIGITS
+                dotdisplay(3, 1);
+                if (!flash_45 || blinker_fast || S1_LONG) {
+                    filldisplay(4, (rtc_table[DS_ADDR_YEAR] >> 4) & (DS_MASK_YEAR_TENS >> 4), 0);
+                    filldisplay(5, rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR_UNITS, 0);
+                }
+#else
                 dot3display(0);
+#endif
                 break;
 #endif
 
+#ifndef WITHOUT_DATE
             case M_WEEKDAY_DISP:
             {
                 uint8_t wd;
@@ -1149,13 +1292,21 @@ int main()
               filldisplay(2, (rtc_table[DS_ADDR_YEAR] >> 4) & (DS_MASK_YEAR_TENS >> 4), 0);
               filldisplay(3, rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR_UNITS, 0);
               break;
+#endif
 
           case M_TEMP_DISP:
+#ifdef SIX_DIGITS
+              filldisplay(2, ds_int2bcd_tens(temp), 0);
+              filldisplay(3, ds_int2bcd_ones(temp), 0);
+              filldisplay(4, CONF_C_F ? LED_f : LED_c, 1);
+              // if (temp<0) filldisplay( 3, LED_DASH, 0);  -- temp defined as uint16, cannot be <0
+              dot5display(0);
+#else
               filldisplay(0, ds_int2bcd_tens(temp), 0);
               filldisplay(1, ds_int2bcd_ones(temp), 0);
               filldisplay(2, CONF_C_F ? LED_f : LED_c, 1);
-              // if (temp<0) filldisplay( 3, LED_DASH, 0);  -- temp defined as uint16, cannot be <0
               dot3display(0);
+#endif
               break;
 
 #ifdef DEBUG
