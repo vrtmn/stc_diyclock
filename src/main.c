@@ -13,86 +13,19 @@
 #include "ds1302.h"
 #include "led.h"
 
+#include "hwconfig.h"
+#include "models.h"
+#include "keyboardmode.h"
+#include "displaymode.h"
+#include "event.h"
+
+#ifdef WITH_NMEA
 #define FOSC    11059200
+#endif
 
 // clear wdt
 #define WDT_CLEAR()    (WDT_CONTR |= 1 << 4)
 
-// hardware configuration
-#include "hwconfig.h"
-#include "models.h"
-
-// keyboard mode states
-enum keyboard_mode {
-    K_NORMAL,
-    K_SET_HOUR,
-    K_SET_MINUTE,
-    K_SET_SECOND,
-    K_SET_HOUR_12_24,
-#ifdef WITH_NMEA
-    K_TZ_SET_HOUR,
-    K_TZ_SET_MINUTE,
-    K_TZ_SET_DST,
-#endif
-    K_SEC_DISP,
-    K_TEMP_DISP,
-#ifndef WITHOUT_DATE
-    K_DATE_DISP,
-    K_SET_MONTH,
-    K_SET_DAY,
-#ifdef SIX_DIGITS
-    K_SET_YEAR,
-#else
-    K_YEAR_DISP,
-#endif
-    K_WEEKDAY_DISP,
-#endif
-#ifndef WITHOUT_ALARM
-    K_ALARM,
-    K_ALARM_SET_HOUR,
-    K_ALARM_SET_MINUTE,
-#endif
-#ifndef WITHOUT_CHIME
-    K_CHIME,
-    K_CHIME_SET_SINCE,
-    K_CHIME_SET_UNTIL,
-#endif
-#ifdef DEBUG
-    K_DEBUG,
-    K_DEBUG2,
-    K_DEBUG3,
-#endif
-};
-
-// display mode states
-enum display_mode {
-    M_NORMAL,
-    M_SET_HOUR_12_24,
-#ifdef WITH_NMEA
-    M_TZ_SET_TIME,
-    M_TZ_SET_DST,
-#endif
-#ifndef SIX_DIGITS
-    M_SEC_DISP,
-#endif
-    M_TEMP_DISP,
-#ifndef WITHOUT_DATE
-    M_DATE_DISP,
-    M_WEEKDAY_DISP,
-    M_YEAR_DISP,
-#endif
-#ifndef WITHOUT_ALARM
-    M_ALARM,
-#endif
-#ifndef WITHOUT_CHIME
-    M_CHIME,
-#endif
-#ifdef DEBUG
-    M_DEBUG,
-    M_DEBUG2,
-    M_DEBUG3,
-#endif
-};
 #define NUM_DEBUG 3
 
 #define MONITOR_S(n) \
@@ -219,6 +152,7 @@ __bit  flash_45;
 uint8_t rtc_hh_bcd;
 uint8_t rtc_mm_bcd;
 __bit rtc_pm;
+
 #ifndef WITHOUT_ALARM
 uint8_t alarm_hh_bcd;
 uint8_t alarm_mm_bcd;
@@ -226,6 +160,7 @@ __bit alarm_pm;
 __bit alarm_trigger;
 __bit alarm_reset;
 #endif
+
 #ifndef WITHOUT_CHIME
 uint8_t chime_ss_bcd; // hour since
 uint8_t chime_uu_bcd; // hour until
@@ -238,6 +173,7 @@ enum chime_state {
 };
 volatile uint8_t chime_trigger = CHIME_IDLE;
 #endif
+
 __bit cfg_changed = 1;
 uint8_t snooze_time;	//snooze(min)
 uint8_t alarm_mm_snooze;	//next alarm time (min)
@@ -266,20 +202,6 @@ volatile __bit S3_PRESSED;
 volatile uint8_t debounce[NUM_SW];      // switch debounce buffer
 volatile uint8_t switchcount[NUM_SW];
 #define SW_CNTMAX 80	//long push
-
-enum Event {
-    EV_NONE,
-    EV_S1_SHORT,
-    EV_S1_LONG,
-    EV_S2_SHORT,
-    EV_S2_LONG,
-    EV_S1S2_LONG,
-#ifdef stc15w408as
-    EV_S3_SHORT,
-    EV_S3_LONG,
-#endif
-    EV_TIMEOUT,
-};
 
 #ifdef WITH_NMEA
 #include "nmea.h"
