@@ -3,9 +3,6 @@
 // Copyright 2016, Jens Jensen
 //
 
-// silence: "src/main.c:672: warning 126: unreachable code"
-#pragma disable_warning 126
-
 #include "stc15.h"
 #include <stdint.h>
 #include <stdio.h>
