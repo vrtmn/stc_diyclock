@@ -659,7 +659,15 @@ int main()
                 else if (ev == EV_S2_LONG)
                     kmode = CONF_SW_MMDD ? K_SET_DAY : K_SET_MONTH;
                 else if (ev == EV_S2_SHORT)
+#ifdef WITHOUT_WEEKDAY
+#ifdef SIX_DIGITS
+                    kmode = K_NORMAL;
+#else
+                    kmode = K_YEAR_DISP;
+#endif
+#else
                     kmode = K_WEEKDAY_DISP;
+#endif
                 break;
 
             case K_SET_MONTH:
@@ -702,6 +710,7 @@ int main()
                 break;
 #endif
 
+#ifndef WITHOUT_WEEKDAY
             case K_WEEKDAY_DISP:
                 dmode = M_WEEKDAY_DISP;
                 if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
@@ -713,6 +722,7 @@ int main()
                     kmode = K_YEAR_DISP;
 #endif
                 break;
+#endif                
 
 #ifndef SIX_DIGITS
             case K_YEAR_DISP:
@@ -870,14 +880,16 @@ int main()
                 if (ev == EV_S1_SHORT)
                 {
 #ifdef SIX_DIGITS
+#ifndef WITHOUT_ALARM
                     kmode = K_ALARM;
+#endif
 #else
                     kmode = K_SEC_DISP;
 #endif
                 }
                 else if (ev == EV_S1_LONG)
                 {
-#ifndef SIX_DIGITS
+#if !defined(SIX_DIGITS) && !defined(WITHOUT_ALARM)
                     kmode = K_ALARM;
 #endif
                 }
@@ -917,7 +929,7 @@ int main()
                 dmode = M_DATE_DISP;
             }
 #endif
-#if !defined(WITHOUT_DATE) && defined(AUTO_SHOW_WEEKDAY)
+#if !defined(WITHOUT_DATE) && !defined(WITHOUT_WEEKDAY) && defined(AUTO_SHOW_WEEKDAY)
             else if (ss < 0x35)
             {
                 dmode = M_WEEKDAY_DISP;
@@ -995,10 +1007,14 @@ int main()
                     {
                         filldisplay(4, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), blinker_slow);
                         filldisplay(5, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
-                    } else if (dmode == M_ALARM) {
+                    }
+#ifndef WITHOUT_ALARM
+                    else if (dmode == M_ALARM)
+                    {
                         // Show letter 'A' for the alarm mode
                         filldisplay(5, LED_a, 0);
                     }
+#endif                    
 #ifndef WITHOUT_CHIME
                     else if (dmode == M_CHIME)
                     {
@@ -1133,6 +1149,7 @@ int main()
 #endif
 
 #ifndef WITHOUT_DATE
+#ifndef WITHOUT_WEEKDAY
             case M_WEEKDAY_DISP:
             {
                 uint8_t wd;
@@ -1146,6 +1163,7 @@ int main()
                 dot3display(0);
 	      }
 	      break;
+#endif          
 
           case M_YEAR_DISP:
               // fix upper 2 digit as 20

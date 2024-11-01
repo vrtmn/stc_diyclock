@@ -16,6 +16,7 @@ This file defines configurations for clock models.
 #define WITHOUT_DATE
 #define WITHOUT_CHIME
 #define SHOW_MINUTES_WITH_SECONDS
+#define WITHOUT_WEEKDAY
 #define DEBUG
 
 #elif GREEN_6

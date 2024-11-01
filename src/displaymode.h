@@ -18,7 +18,9 @@ enum display_mode {
     M_TEMP_DISP,
 #ifndef WITHOUT_DATE
     M_DATE_DISP,
+#ifndef WITHOUT_WEEKDAY
     M_WEEKDAY_DISP,
+#endif
     M_YEAR_DISP,
 #endif
 #ifndef WITHOUT_ALARM

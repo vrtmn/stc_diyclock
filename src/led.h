@@ -47,6 +47,7 @@ ledtable[]
     0b10100001, //     0b01011110, // d
     0b10000110, //     0b01111001, // E
     0b10001110, //     0b01110001, // F
+#ifdef WITHOUT_WEEKDAY    
     0b11000010, //     G  0x14
     0b10001011, //     H  
     0b11111011, //     I
@@ -67,6 +68,7 @@ ledtable[]
     0b10001001, //     X
     0b10010001, //     Y
     0b10110110, //     Z  0x27
+#endif    
 };
 
 // Same but with abc <-> def
@@ -101,6 +103,7 @@ ledtable2[]
     0b10001100, //     0b01011110, // d
     0b10110000, //     0b01111001, // E
     0b10110001, //     0b01110001, // F
+#ifdef WITHOUT_WEEKDAY
     0b11010000, //     G
     0b10011001, //     H
     0b11011111, //     I
@@ -121,8 +124,10 @@ ledtable2[]
     0b10001001, //     X
     0b10001010, //     Y
     0b10110110, //     Z
+#endif
 };
 
+#ifndef WITHOUT_WEEKDAY
 const char weekDay[][4] = {
       "SUN",
       "MON",
@@ -132,6 +137,7 @@ const char weekDay[][4] = {
       "FRI",
       "SAT",
 };
+#endif
 
 uint8_t tmpbuf[NUMBER_OF_DIGITS];
 uint8_t dbuf[NUMBER_OF_DIGITS];

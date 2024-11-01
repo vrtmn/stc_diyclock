@@ -30,7 +30,9 @@ enum keyboard_mode {
 #else
     K_YEAR_DISP,
 #endif
+#ifndef WITHOUT_WEEKDAY
     K_WEEKDAY_DISP,
+#endif
 #endif
 
 #ifndef WITHOUT_ALARM
