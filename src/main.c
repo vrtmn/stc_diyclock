@@ -118,7 +118,6 @@ volatile uint8_t chime_trigger = CHIME_IDLE;
 __bit cfg_changed = 1;
 uint8_t snooze_time;	//snooze(min)
 uint8_t alarm_mm_snooze;	//next alarm time (min)
-uint8_t ss;
 
 #if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
 #define SEC_PER_MONTH 2592000
@@ -312,19 +311,6 @@ uint8_t preparepm(uint8_t pm)
     }
 #endif
 return pm;
-}
-
-//3rd LED's dot display. Blink pattern is set when alarm is set.
-void dot3display(__bit pm)
-{
-    pm = preparepm(pm);
-    dotdisplay(3, pm);
-}
-
-void dot5display(__bit pm)
-{
-    pm = preparepm(pm);
-    dotdisplay(5, pm);
 }
 
 #ifndef WITHOUT_ALARM
@@ -911,7 +897,7 @@ int main()
         dmode_bak = dmode;
 
         if (dmode == M_NORMAL && kmode == K_NORMAL) {
-            ss = rtc_table[DS_ADDR_SECONDS];
+            uint8_t ss = rtc_table[DS_ADDR_SECONDS];
             if (ss < 0x20) 
             {
                 dmode = M_NORMAL;
@@ -1045,9 +1031,9 @@ int main()
                 }
 #endif
 #ifdef SIX_DIGITS
-                dot5display(pm);
+                dotdisplay(5, preparepm(pm));
 #else
-                dot3display(pm);
+                dotdisplay(3, preparepm(pm));
 #endif
                 break;
             }
@@ -1107,7 +1093,7 @@ int main()
             
                 filldisplay(2, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), blinker_slow);
                 filldisplay(3, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
-                dot3display(0);
+                dotdisplay(3, 0);
                 break;
 #endif
 
@@ -1142,7 +1128,7 @@ int main()
                     filldisplay(5, rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR_UNITS, 0);
                 }
 #else
-                dot3display(0);
+                dotdisplay(3, 0);
 #endif
                 break;
 #endif
@@ -1159,7 +1145,7 @@ int main()
                 filldisplay(2, weekDay[wd][1] - 'A' + LED_a, 0);
                 filldisplay(3, weekDay[wd][2] - 'A' + LED_a, 0);
 
-                dot3display(0);
+                dotdisplay(3, 0);
 	      }
 	      break;
 #endif          
@@ -1180,12 +1166,12 @@ int main()
               filldisplay(3, ds_int2bcd_ones(temp), 0);
               filldisplay(4, CONF_C_F ? LED_f : LED_c, 1);
               // if (temp<0) filldisplay( 3, LED_DASH, 0);  -- temp defined as uint16, cannot be <0
-              dot5display(0);
+              dotdisplay(5, 0);
 #else
               filldisplay(0, ds_int2bcd_tens(temp), 0);
               filldisplay(1, ds_int2bcd_ones(temp), 0);
               filldisplay(2, CONF_C_F ? LED_f : LED_c, 1);
-              dot3display(0);
+              dotdisplay(3, 0);
 #endif
               break;
 
