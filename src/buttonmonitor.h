@@ -1,6 +1,8 @@
 #ifndef BUTTONMONITOR_H
 #define BUTTONMONITOR_H
 
+#define SW_CNTMAX 80	//long push
+
 #define MONITOR_S(n)                                          \
     {                                                         \
         uint8_t s = n - 1;                                    \

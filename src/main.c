@@ -142,7 +142,6 @@ volatile __bit S3_PRESSED;
 
 volatile uint8_t debounce[NUM_SW];      // switch debounce buffer
 volatile uint8_t switchcount[NUM_SW];
-#define SW_CNTMAX 80	//long push
 
 #ifdef WITH_NMEA
 #include "nmea.h"
