@@ -18,7 +18,9 @@ enum keyboard_mode {
     K_TZ_SET_DST,
 #endif
 
+#ifndef SIX_DIGITS
     K_SEC_DISP,
+#endif
     K_TEMP_DISP,
 
 #ifndef WITHOUT_DATE

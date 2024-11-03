@@ -625,6 +625,11 @@ int main()
                 dmode = M_TEMP_DISP;
                 if (ev == EV_S1_SHORT) 
                     ds_temperature_offset_incr();
+#ifdef DEBUG
+                else if (ev == EV_S1S2_LONG) {
+                    kmode = K_DEBUG;
+                }
+#endif
                 else if (ev == EV_S1_LONG)
                     ds_temperature_cf_toggle();
                 else if (ev == EV_S2_SHORT) {
@@ -721,9 +726,12 @@ int main()
 #endif
 
 #ifdef DEBUG
-            // To enter DEBUG mode, go to the SECONDS display, then hold S1 and S2 simultaneously.
-            // S1 cycles through the DEBUG modes.
-            // To exit DEBUG mode, hold S1 and S2 again.
+            /*
+            To enter DEBUG mode, go to the Temperature screen,
+            then hold S1 and S2 simultaneously.
+            S1 cycles through the DEBUG modes.
+            To exit DEBUG mode, hold S1 and S2 again.
+            */
             case K_DEBUG:
             case K_DEBUG2:
             case K_DEBUG3:
@@ -732,7 +740,7 @@ int main()
                     kmode = (kmode - K_DEBUG + 1) % NUM_DEBUG + K_DEBUG;
                 }
                 else if (ev == EV_S1S2_LONG) {
-                    kmode = K_SEC_DISP;
+                    kmode = K_TEMP_DISP;
                 }
                 break;
 #endif
@@ -748,10 +756,6 @@ int main()
                     corr_remaining = RUNTIME_PER_SEC;
 #endif
                 }
-#ifdef DEBUG
-                else if (ev == EV_S1S2_LONG)
-                    kmode = K_DEBUG;
-#endif
                 break;
 #endif
 
@@ -1189,6 +1193,9 @@ int main()
                 }
                 filldisplay(2, hex[cc >> 4 & 0x0F], ev != EV_NONE);
                 filldisplay(3, hex[cc & 0x0F], blinker_slow & blinker_fast);
+#ifdef SIX_DIGITS                
+                filldisplay(5, 1, 0);
+#endif    
                 break;
             }
             case M_DEBUG2:
@@ -1200,6 +1207,9 @@ int main()
                 filldisplay( 1, hex[adc & 0x0F], 0);
                 filldisplay( 2, hex[lv>>4], 0);
                 filldisplay( 3, hex[lv & 0x0F], 0);
+#ifdef SIX_DIGITS                
+                filldisplay(5, 2, 0);
+#endif    
                 break;
             }
             case M_DEBUG3:
@@ -1210,6 +1220,9 @@ int main()
                 filldisplay( 1, hex[rt >> 8 & 0x0F], 0);
                 filldisplay( 2, hex[rt >> 4 & 0x0F], 0);
                 filldisplay( 3, hex[rt & 0x0F], 0);
+#ifdef SIX_DIGITS                
+                filldisplay(5, 3, 0);
+#endif    
                 break;
             }
 #endif
