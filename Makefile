@@ -1,6 +1,13 @@
 SDCC ?= sdcc
+
+ifeq ($(NMEA), 1)
+STCCODESIZE ?= 8184
+SDCCOPTS ?= --code-size $(STCCODESIZE) --stack-auto --iram-size 256 --xram-size 256 --data-loc 0x30 --disable-warning 126 --disable-warning 59 --disable-warning 283
+else
 STCCODESIZE ?= 4089
 SDCCOPTS ?= --code-size $(STCCODESIZE) --xram-size 0 --data-loc 0x30 --disable-warning 126 --disable-warning 59 --disable-warning 283
+endif
+
 SDCCREV ?= -Dstc15f204ea
 STCGAL ?= stcgal/stcgal.py
 STCGALOPTS ?= 
@@ -9,6 +16,10 @@ STCGALPROT ?= auto
 FLASHFILE ?= main.hex
 SYSCLK ?= 11059
 CFLAGS ?= -DWITH_ALT_LED9 -DWITHOUT_LEDTABLE_RELOC -DGREEN_6
+
+ifeq ($(NMEA), 1)
+CFLAGS += -DWITH_NMEA
+endif
 
 SRC = src/adc.c src/ds1302.c
 
