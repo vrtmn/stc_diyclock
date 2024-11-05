@@ -77,7 +77,13 @@
 #else
  #define NUM_SW 2
 #endif
+
+#ifdef MAP_SW2_TO_P1_4
+#define SW2     P1_4
+#else
 #define SW2     P3_0
+#endif
+
 #define SW1     P3_1
 
 // ds1302 pins
