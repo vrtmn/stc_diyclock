@@ -8,7 +8,7 @@
 //#include "intrins.h"
 
 /*Define ISP/IAP/EEPROM command*/
-#define CMD_IDLE                    0   //Stand-By
+// #define CMD_IDLE                    0   //Stand-By
 #define CMD_READ                    1   //Byte-Read
 #define CMD_PROGRAM 2           //Byte-Program
 #define CMD_ERASE                   3   //Sector-Erase

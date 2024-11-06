@@ -232,6 +232,7 @@ void ds_minutes_incr() {
     ds_writebyte(DS_ADDR_MINUTES, ds_int2bcd(minutes));
 }
 
+#ifndef WITHOUT_DATE
 // increment year
 void ds_year_incr() {
     uint8_t year = ds_split2int(rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR);
@@ -252,7 +253,9 @@ void ds_day_incr() {
     INCR(day, 1, 31);
     ds_writebyte(DS_ADDR_DAY, ds_int2bcd(day));
 }
+#endif
 
+#ifndef WITHOUT_ALARM
 void ds_alarm_minutes_incr() {
     uint8_t mm = cfg_table[CFG_ALARM_MINUTES_BYTE] & CFG_ALARM_MINUTES_MASK;
     INCR(mm, 0, 59);
@@ -274,7 +277,9 @@ void ds_alarm_on_toggle() {
     CONF_ALARM_ON = !CONF_ALARM_ON;
     ds_ram_config_write();
 }
+#endif
 
+#ifndef WITHOUT_CHIME
 void ds_chime_since_incr() {
     uint8_t hh = cfg_table[CFG_CHIME_SINCE_BYTE ] >> CFG_CHIME_SINCE_SHIFT;
     INCR(hh, 0, 23);
@@ -296,11 +301,14 @@ void ds_chime_on_toggle() {
     CONF_CHIME_ON = !CONF_CHIME_ON;
     ds_ram_config_write();
 }
+#endif
 
+#ifndef WITHOUT_DATE
 void ds_date_mmdd_toggle() {
     CONF_SW_MMDD = !CONF_SW_MMDD;
     ds_ram_config_write();
 }
+#endif
 
 void ds_temperature_offset_incr() {
     uint8_t offset = cfg_table[CFG_TEMP_BYTE] & CFG_TEMP_MASK;
@@ -315,12 +323,14 @@ void ds_temperature_cf_toggle() {
     ds_ram_config_write();
 }
 
+#ifndef WITHOUT_WEEKDAY
 void ds_weekday_incr() {
     uint8_t day = rtc_table[DS_ADDR_WEEKDAY];
     INCR(day, 1, 7);
     ds_writebyte(DS_ADDR_WEEKDAY, day);
     rtc_table[DS_ADDR_WEEKDAY] = day;		// usefull ?
 }
+#endif
 
 void ds_sec_zero() {
     rtc_table[DS_ADDR_SECONDS] = 0;
