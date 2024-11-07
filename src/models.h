@@ -24,7 +24,7 @@ This file defines configurations for clock models.
 
 #define SIX_DIGITS
 
-// #define WITHOUT_CHIME
+#define WITHOUT_CHIME
 #define AUTO_SHOW_TEMPERATURE 
 #define WITHOUT_WEEKDAY
 #define MAP_SW2_TO_P1_4

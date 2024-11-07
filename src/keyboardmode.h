@@ -16,6 +16,7 @@ enum keyboard_mode {
     K_TZ_SET_HOUR,
     K_TZ_SET_MINUTE,
     K_TZ_SET_DST,
+    K_TZ_AUTOUPDATE,
 #endif
 
 #ifndef SIX_DIGITS

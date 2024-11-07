@@ -207,7 +207,7 @@ void timer0_isr() __interrupt(1) __using(1)
                     corr_remaining--;
 #endif
 #if defined(WITH_NMEA)
-                if (!blinker_slow && sync_remaining)
+                if (!blinker_slow && sync_remaining && IS_NMEA_AUTOSYNC_ON)
                     if (!--sync_remaining)
                         REN = 1; // enable uart receiving
 #endif
@@ -571,6 +571,7 @@ int main()
                     nmea_prev_tz_hr = nmea_tz_hr;
                     nmea_prev_tz_min = nmea_tz_min;
                     nmea_prev_tz_dst = nmea_tz_dst;
+                    nmea_prev_autosync = nmea_autosync;
                     kmode = K_TZ_SET_HOUR;
 #else
                     kmode = K_NORMAL;
@@ -612,12 +613,38 @@ int main()
                     nmea_tz_dst ^= 0x01;
                 else if (ev == EV_S2_SHORT) {
                     flash_01 = flash_23 = 0;
-                    kmode = K_NORMAL;
+                    kmode = K_TZ_AUTOUPDATE;
+                }
+                break;
+            case K_TZ_AUTOUPDATE:
+                dmode = M_TZ_AUTOUPDATE;
+                if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
+                    switch (nmea_autosync) {
+                    case NMEA_AUTOSYNC_OFF:
+                        nmea_autosync = NMEA_AUTOSYNC_3H;
+                        break;
+                    case NMEA_AUTOSYNC_3H:
+                        nmea_autosync = NMEA_AUTOSYNC_6H;
+                        break;
+                    case NMEA_AUTOSYNC_6H:
+                        nmea_autosync = NMEA_AUTOSYNC_12H;
+                        break;
+                    case NMEA_AUTOSYNC_12H:
+                        nmea_autosync = NMEA_AUTOSYNC_24H;
+                        break;
+                    default:
+                        nmea_autosync = NMEA_AUTOSYNC_OFF;
+                        break;
+                    }
+                else if (ev == EV_S2_SHORT) {
+                    sync_remaining = NMEA_AUTOSYNC_DELAY;
                     if (nmea_prev_tz_hr != nmea_tz_hr ||
                         nmea_prev_tz_min != nmea_tz_min ||
-                        nmea_prev_tz_dst != nmea_tz_dst)
+                        nmea_prev_tz_dst != nmea_tz_dst ||
+                        nmea_prev_autosync != nmea_autosync) {
                         nmea_save_tz();
-                    sync_remaining = 10; // allow sync after adjusting
+                    }
+                    kmode = K_NORMAL;
                 }
                 break;
 #endif
@@ -1059,9 +1086,12 @@ int main()
                 if (hh < 0) {
                     hh = -hh;
                     dotdisplay(3, 1);
-                } else
+                } else {
                     dotdisplay(3, 0);
+                }
+                dotdisplay(1, 1);
                 dotdisplay(2, 1);
+
                 if (!flash_01 || blinker_fast || S1_LONG) {
                     if (hh >= 10) {
                         filldisplay(0, 1, 0);
@@ -1080,7 +1110,38 @@ int main()
                 filldisplay(0, 'D'-'A'+LED_a, 0);
                 filldisplay(1, 'S'-'A'+LED_a, 0);
                 filldisplay(2, 'T'-'A'+LED_a, 0);
+#ifdef SIX_DIGITS                
+                filldisplay(4, nmea_tz_dst, 0);
+#else
                 filldisplay(3, nmea_tz_dst, 0);
+#endif                
+                break;
+            case M_TZ_AUTOUPDATE:
+#ifdef SIX_DIGITS                
+                filldisplay(0, 'U'-'A'+LED_a, 0);
+                filldisplay(1, 'P'-'A'+LED_a, 0);
+                filldisplay(2, 'D'-'A'+LED_a, 0);
+
+                if (NMEA_AUTOSYNC_OFF == nmea_autosync) {
+                    filldisplay(3, 0, 0);
+                    filldisplay(4, LED_f, 0);
+                    filldisplay(5, LED_f, 0);
+                } else {
+                    filldisplay(3, nmea_autosync / 10, 0);
+                    filldisplay(4, nmea_autosync % 10, 0);
+                    filldisplay(5, LED_h, 0);
+                }
+#else
+                if (NMEA_AUTOSYNC_OFF == nmea_autosync) {
+                    filldisplay(0, 0, 0);
+                    filldisplay(1, LED_f, 0);
+                    filldisplay(2, LED_f, 0);
+                } else {
+                    filldisplay(0, nmea_autosync / 10, 0);
+                    filldisplay(1, nmea_autosync % 10, 0);
+                    filldisplay(2, LED_h, 0);
+                }
+#endif                
                 break;
 #endif
 
@@ -1272,7 +1333,7 @@ int main()
                 // time passed - allowed to sync
                 nmea2localtime();
                 REN = 0; // disable uart receiving
-                sync_remaining = MIN_NMEA_PAUSE;
+                sync_remaining = NMEA_AUTOSYNC_DELAY;
             }
             uidx = 0;
             nmea_state = NMEA_NONE;

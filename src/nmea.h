@@ -3,14 +3,13 @@
 
 #define BAUDRATE 9600 // serial port speed (4800/9600 - standard for GPS)
 
-#define MIN_NMEA_PAUSE 21600 // min pause between syncs (sec) - 6hr
-
 volatile uint32_t sync_remaining = 0;
 
 #define IAP_TZ_ADDRESS 0x0000
 #define IAP_TZ_HR      0x0000
 #define IAP_TZ_MIN     0x0001
 #define IAP_TZ_DST     0x0002
+#define IAP_TZ_AUTOSYNC 0x0003
 
 volatile int8_t nmea_tz_hr;
 volatile uint8_t nmea_tz_min;
@@ -18,6 +17,7 @@ volatile uint8_t nmea_tz_dst;
 int8_t nmea_prev_tz_hr;
 uint8_t nmea_prev_tz_min;
 uint8_t nmea_prev_tz_dst;
+uint8_t nmea_prev_autosync;
 
 #define NMEA_LINE_LEN_MAX 84
 
@@ -32,6 +32,19 @@ volatile enum {
     NMEA_PARSE,
     NMEA_SET
 } nmea_state = NMEA_NONE;
+
+// Auto sync interval, hours
+volatile enum {
+    NMEA_AUTOSYNC_OFF = 0,
+    NMEA_AUTOSYNC_3H = 3,
+    NMEA_AUTOSYNC_6H = 6,
+    NMEA_AUTOSYNC_12H = 12,
+    NMEA_AUTOSYNC_24H = 24
+} nmea_autosync = NMEA_AUTOSYNC_OFF;
+
+#define IS_NMEA_AUTOSYNC_ON (nmea_autosync != NMEA_AUTOSYNC_OFF)
+#define SECONDS_IN_ONE_HOUR 3600
+#define NMEA_AUTOSYNC_DELAY (nmea_autosync * SECONDS_IN_ONE_HOUR)
 
 void uart1_init()
 {
@@ -219,7 +232,7 @@ void nmea_apply_tz(struct tm *t)
                     t->tm_year --;
                 } else
                     t->tm_mon --;
-                t->tm_mday  =days_per_month(t->tm_year+1900, t->tm_mon);
+                t->tm_mday = days_per_month(t->tm_year+1900, t->tm_mon);
             }
         } else
             // same day
@@ -271,6 +284,7 @@ void nmea_save_tz(void )
     IapProgramByte(IAP_TZ_HR, (uint8_t) nmea_tz_hr);
     IapProgramByte(IAP_TZ_MIN, nmea_tz_min);
     IapProgramByte(IAP_TZ_DST, nmea_tz_dst);
+    IapProgramByte(IAP_TZ_AUTOSYNC, nmea_autosync);
 }
 
 void nmea_load_tz(void )
@@ -278,6 +292,7 @@ void nmea_load_tz(void )
     nmea_tz_hr = (int8_t) IapReadByte(IAP_TZ_HR);
     nmea_tz_min = IapReadByte(IAP_TZ_MIN);
     nmea_tz_dst = IapReadByte(IAP_TZ_DST);
+    nmea_autosync = IapReadByte(IAP_TZ_AUTOSYNC);
     // HR after reflash will be == 0xff == -1 by default
     if (nmea_tz_hr < -12 || nmea_tz_hr > 12)
         nmea_tz_hr = 0;

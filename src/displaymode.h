@@ -11,6 +11,7 @@ enum display_mode {
 #ifdef WITH_NMEA
     M_TZ_SET_TIME,
     M_TZ_SET_DST,
+    M_TZ_AUTOUPDATE,
 #endif
 #ifndef SIX_DIGITS
     M_SEC_DISP,
