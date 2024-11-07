@@ -35,7 +35,10 @@ volatile enum {
 
 void uart1_init()
 {
+#ifdef MOVE_UART_PINS_TO_P3_6
     P_SW1 |= (1 << 6);          // move UART1 pins -> P3_6:rxd, P3_7:txd
+#endif
+    
     // UART1 use Timer2
     T2L = (65536 - (FOSC / 4 / BAUDRATE)) & 0xFF;
     T2H = (65536 - (FOSC / 4 / BAUDRATE)) >> 8;
