@@ -17,10 +17,6 @@
 #include "event.h"
 #include "buttonmonitor.h"
 
-#ifdef WITH_NMEA
-#define FOSC    11059200
-#endif
-
 // clear wdt
 #define WDT_CLEAR()    (WDT_CONTR |= 1 << 4)
 
@@ -143,7 +139,14 @@ volatile uint8_t debounce[NUM_SW];      // switch debounce buffer
 volatile uint8_t switchcount[NUM_SW];
 
 #ifdef WITH_NMEA
+#define FOSC    11059200
+
 #include "nmea.h"
+
+__bit is_nmea_receiving_on = 0;
+
+void enable_nmea_receiving();
+void disable_nmea_receiving();
 #endif
 
 volatile enum Event event;
@@ -207,9 +210,10 @@ void timer0_isr() __interrupt(1) __using(1)
                     corr_remaining--;
 #endif
 #if defined(WITH_NMEA)
-                if (!blinker_slow && sync_remaining && IS_NMEA_AUTOSYNC_ON)
-                    if (!--sync_remaining)
-                        REN = 1; // enable uart receiving
+                if (IS_NMEA_AUTOSYNC_ON && !blinker_slow && 
+                    nmea_seconds_to_sync && !--nmea_seconds_to_sync) {
+                    enable_nmea_receiving();
+                }
 #endif
 #ifndef WITHOUT_ALARM
                 // 1/ 2sec: 20000 ms
@@ -618,7 +622,7 @@ int main()
                 break;
             case K_TZ_AUTOUPDATE:
                 dmode = M_TZ_AUTOUPDATE;
-                if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
+                if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast)) {
                     switch (nmea_autosync) {
                     case NMEA_AUTOSYNC_OFF:
                         nmea_autosync = NMEA_AUTOSYNC_3H;
@@ -636,13 +640,14 @@ int main()
                         nmea_autosync = NMEA_AUTOSYNC_OFF;
                         break;
                     }
-                else if (ev == EV_S2_SHORT) {
-                    sync_remaining = NMEA_AUTOSYNC_DELAY;
+                } else if (ev == EV_S2_SHORT) {
+                    nmea_seconds_to_sync = NMEA_AUTOSYNC_DELAY;
                     if (nmea_prev_tz_hr != nmea_tz_hr ||
                         nmea_prev_tz_min != nmea_tz_min ||
                         nmea_prev_tz_dst != nmea_tz_dst ||
                         nmea_prev_autosync != nmea_autosync) {
                         nmea_save_tz();
+                        enable_nmea_receiving();
                     }
                     kmode = K_NORMAL;
                 }
@@ -903,6 +908,15 @@ int main()
                     kmode = K_SEC_DISP;
 #endif
                 }
+#ifdef WITH_NMEA                
+                else if (ev == EV_S1S2_LONG) {
+                    if (is_nmea_receiving_on) {
+                        disable_nmea_receiving();
+                    } else {
+                        enable_nmea_receiving();
+                    }
+                }
+#endif                
                 else if (ev == EV_S1_LONG)
                 {
 #if !defined(SIX_DIGITS) && !defined(WITHOUT_ALARM)
@@ -1328,17 +1342,40 @@ int main()
         WDT_CLEAR();
 
 #ifdef WITH_NMEA
-        if (nmea_state == NMEA_SET) {
-            if (!sync_remaining) {
-                // time passed - allowed to sync
-                nmea2localtime();
-                REN = 0; // disable uart receiving
-                sync_remaining = NMEA_AUTOSYNC_DELAY;
+        if (is_nmea_receiving_on) {
+            if (nmea_state == NMEA_SET || ++nmea_progress_seconds >= NMEA_MAX_SYNC_DURATION) {
+                disable_nmea_receiving();
+                
+                if (nmea_state == NMEA_SET) {
+                    nmea2localtime();
+                }
+
+                nmea_state = NMEA_NONE;
+                nmea_seconds_to_sync = NMEA_AUTOSYNC_DELAY;
             }
-            uidx = 0;
-            nmea_state = NMEA_NONE;
         }
 #endif
     }
 }
+
+#ifdef WITH_NMEA
+void enable_nmea_receiving() {
+#ifdef WITH_NMEA_DEVICE_SWITCH
+    NMEA_DEVICE_ON;
+#endif
+    REN = 1; // enable uart receiving
+    is_nmea_receiving_on = 1;
+    nmea_progress_seconds = 0;
+}
+
+void disable_nmea_receiving() {
+#ifdef WITH_NMEA_DEVICE_SWITCH
+    NMEA_DEVICE_OFF;
+#endif
+    REN = 0; // disable uart receiving
+    is_nmea_receiving_on = 0;
+    nmea_progress_seconds = 0;
+}
+#endif
+
 /* ------------------------------------------------------------------------- */

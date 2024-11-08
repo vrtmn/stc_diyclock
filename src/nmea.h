@@ -3,14 +3,14 @@
 
 #define BAUDRATE 9600 // serial port speed (4800/9600 - standard for GPS)
 
-volatile uint32_t sync_remaining = 0;
-
 #define IAP_TZ_ADDRESS 0x0000
 #define IAP_TZ_HR      0x0000
 #define IAP_TZ_MIN     0x0001
 #define IAP_TZ_DST     0x0002
 #define IAP_TZ_AUTOSYNC 0x0003
 
+volatile uint32_t nmea_seconds_to_sync = 0;
+volatile uint32_t nmea_progress_seconds = 0;
 volatile int8_t nmea_tz_hr;
 volatile uint8_t nmea_tz_min;
 volatile uint8_t nmea_tz_dst;
@@ -45,6 +45,7 @@ volatile enum {
 #define IS_NMEA_AUTOSYNC_ON (nmea_autosync != NMEA_AUTOSYNC_OFF)
 #define SECONDS_IN_ONE_HOUR 3600
 #define NMEA_AUTOSYNC_DELAY (nmea_autosync * SECONDS_IN_ONE_HOUR)
+#define NMEA_MAX_SYNC_DURATION ((3600 / 2) * 10)  // Number of 100-ms intervals (1000/100)
 
 void uart1_init()
 {

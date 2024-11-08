@@ -35,6 +35,12 @@
  #define BUZZER_OFF
 #endif
 
+#if defined(WITH_NMEA) && defined(WITH_NMEA_DEVICE_SWITCH)
+#define NMEA_DEVICE_PORT P1_3
+#define NMEA_DEVICE_ON (NMEA_DEVICE_PORT=0)
+#define NMEA_DEVICE_OFF (NMEA_DEVICE_PORT=1)
+#endif 
+
 // 7-seg led port setup
 
 // which port the segments are connected to

@@ -17,6 +17,8 @@ This file defines configurations for clock models.
 #define WITHOUT_CHIME
 #define SHOW_MINUTES_WITH_SECONDS
 #define WITHOUT_WEEKDAY
+#define WITH_NMEA_DEVICE_SWITCH
+#define MOVE_UART_PINS_TO_P3_6
 #define DEBUG
 
 #elif GREEN_6
@@ -28,6 +30,7 @@ This file defines configurations for clock models.
 #define AUTO_SHOW_TEMPERATURE 
 #define WITHOUT_WEEKDAY
 #define MAP_SW2_TO_P1_4
+#define WITH_NMEA_DEVICE_SWITCH
 // #define DEBUG
 
 #endif
