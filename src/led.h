@@ -47,7 +47,6 @@ ledtable[]
     0b10100001, //     0b01011110, // d
     0b10000110, //     0b01111001, // E
     0b10001110, //     0b01110001, // F
-#ifdef WITHOUT_WEEKDAY    
     0b11000010, //     G  0x14
     0b10001011, //     H  
     0b11111011, //     I
@@ -61,14 +60,13 @@ ledtable[]
     0b10011000, //     Q
     0b10101111, //     R
     0b10010010, //     S  0x20
-    0b11111000, //     T
+    0b10000111, //     T
     0b11100011, //     U
     0b11000001, //     V  0x23
     0b10000001, //     W  0x24
     0b10001001, //     X
     0b10010001, //     Y
     0b10110110, //     Z  0x27
-#endif    
 };
 
 // Same but with abc <-> def
@@ -103,7 +101,6 @@ ledtable2[]
     0b10001100, //     0b01011110, // d
     0b10110000, //     0b01111001, // E
     0b10110001, //     0b01110001, // F
-#ifdef WITHOUT_WEEKDAY
     0b11010000, //     G
     0b10011001, //     H
     0b11011111, //     I
@@ -117,14 +114,13 @@ ledtable2[]
     0b10000011, //     Q
     0b10111101, //     R
     0b10010010, //     S
-    0b11000111, //     T
+    0b10111000, //     T
     0b11011100, //     U
     0b11001000, //     V
     0b10001000, //     W
     0b10001001, //     X
     0b10001010, //     Y
     0b10110110, //     Z
-#endif
 };
 
 #ifndef WITHOUT_WEEKDAY
@@ -160,8 +156,8 @@ __bit   dot5;
 #define updateTmpDisplay() { uint8_t tmp; \
                         tmp=ledtable[tmpbuf[0]]; if (dot0) tmp&=0x7F; dbuf[0]=tmp; \
                         tmp=ledtable[tmpbuf[1]]; if (dot1) tmp&=0x7F; dbuf[1]=tmp; \
-                        tmp=ledtable[tmpbuf[3]]; if (dot3) tmp&=0x7F; dbuf[3]=tmp; \
                         tmp=ledtable2[tmpbuf[2]]; if (dot2) tmp&=0x7F; dbuf[2]=tmp; \
+                        tmp=ledtable[tmpbuf[3]]; if (dot3) tmp&=0x7F; dbuf[3]=tmp; \
                         tmp=ledtable2[tmpbuf[4]]; if (dot4) tmp&=0x7F; dbuf[4]=tmp; \
                         tmp=ledtable2[tmpbuf[5]]; if (dot5) tmp&=0x7F; dbuf[5]=tmp; }
 #else                        
