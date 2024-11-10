@@ -67,19 +67,21 @@ void uart1_init()
 // return pointer to comma N num in ubuf
 char *nmea_comma(uint8_t num)
 {
-    int8_t i;
-    for (i = 0; i < uidx; i++)
-        if (ubuf[i] == ',' && !--num)
+    for (int8_t i = 0; i != uidx; i++) {
+        if (ubuf[i] == ',' && !--num) {
             return ubuf + i;
+        }
+    }
     return NULL;
 }
 
 // just simple memcmp, ret 0 == equal
 int8_t nmea_cmp(char *dst, char *src, uint8_t n)
 {
-    while (n--)
+    while (n--) {
         if (*dst++ != *src++)
             return 1;
+    }
     return 0;
 }
 
@@ -93,21 +95,22 @@ void nmea_cpy(uint8_t *dst, uint8_t *src, uint8_t n)
 // ret 0 == valid crc
 uint8_t nmea_crc_check()
 {
-    char *p;
-    uint8_t crc;
-    for (crc = 0, p = ubuf + 1; *p != '*'; p++)
+    char *p = ubuf + 1;
+    uint8_t crc = 0;
+    while (*p != '*') {
         crc ^= *p;
+        p++;
+    }
     return ((((*(++p) - '0') & 0x0f) << 4) & ((*(++p) - '0') & 0x0f)) ^ crc;
 }
 
 void uart1_isr() __interrupt(4) __using(2)
 {
-    char ch;
     char *p;
     if (RI) {
         RI = 0;                 // clear int
         if (nmea_state != NMEA_SET && nmea_state != NMEA_PARSE) {
-            ch = SBUF;
+            char ch = SBUF;
             switch (ch) {
             case '$':
                 uidx = 0;
@@ -186,11 +189,11 @@ uint8_t days_per_month(uint16_t year, uint8_t month)
 void nmea_apply_tz(struct tm *t)
 {
     int8_t hdiff = nmea_tz_hr;
-    if (t->tm_sec < 59)
-        t->tm_sec ++; // just 1 sec compensation for nmea transfer delay
+    // if (t->tm_sec < 59)
+    //     t->tm_sec ++; // just 1 sec compensation for nmea transfer delay
     if (nmea_tz_dst)
-        hdiff ++;
-    if (nmea_tz_min)
+        hdiff++;
+    if (nmea_tz_min) {
         if (hdiff >= 0) {
             // positive TZ
             if ((t->tm_min = t->tm_min + nmea_tz_min) >= 60) {
@@ -205,6 +208,7 @@ void nmea_apply_tz(struct tm *t)
             } else
                 t->tm_min = t->tm_min - nmea_tz_min;
         }
+    }
     if (hdiff > 0) {
         // positive TZ
         if ((t->tm_hour = t->tm_hour + hdiff) >= 24) {
@@ -231,13 +235,15 @@ void nmea_apply_tz(struct tm *t)
                     // prev year
                     t->tm_mon = 11; // dec
                     t->tm_year --;
-                } else
+                } else {
                     t->tm_mon --;
-                t->tm_mday = days_per_month(t->tm_year+1900, t->tm_mon);
+                }
+                t->tm_mday = days_per_month(t->tm_year + 1900, t->tm_mon);
             }
-        } else
+        } else {
             // same day
             t->tm_hour += hdiff;
+        }
     }
 }
 
@@ -245,32 +251,37 @@ void nmea2localtime(void)
 {
     char *p;
     struct tm t;
-    uint8_t hmode = DS_MASK_1224_MODE;;
     // $GPRMC,232231.00,A,,,,,,,170420,,,*27
     p = nmea_comma(9) + 1;
     t.tm_mday = char2int(p);          // day
-    t.tm_mon = char2int(p+2) - 1;     // month, 0 = jan
-    t.tm_year = char2int(p+4) + 100;  // year - 1900
+    t.tm_mon = char2int(p + 2) - 1;     // month, 0 = jan
+    t.tm_year = char2int(p + 4) + 100;  // year - 1900
     p = nmea_comma(1) + 1;
     t.tm_hour = char2int(p);
-    t.tm_min = char2int(p+2);
-    t.tm_sec = char2int(p+4);
+    t.tm_min = char2int(p + 2);
+    t.tm_sec = char2int(p + 4);
     nmea_apply_tz(&t);
 
     ds_writebyte(DS_ADDR_DAY, ds_int2bcd(t.tm_mday));
     ds_writebyte(DS_ADDR_MONTH, ds_int2bcd(t.tm_mon + 1));
     ds_writebyte(DS_ADDR_YEAR, ds_int2bcd(t.tm_year - 100));
-    ds_writebyte(DS_ADDR_WEEKDAY, dayofweek(t.tm_year+1900, t.tm_mon+1, t.tm_mday) + 1);
-    if (!H12_12) {
-        ds_writebyte(DS_ADDR_HOUR, ds_int2bcd(t.tm_hour));
-    } else {
+    ds_writebyte(DS_ADDR_WEEKDAY, dayofweek(t.tm_year + 1900, t.tm_mon + 1, t.tm_mday) + 1);
+    
+    if (H12_12) {
+        uint8_t hmode = DS_MASK_1224_MODE;
+        
         if (t.tm_hour >= 12) {
             t.tm_hour -= 12;
             hmode |= DS_MASK_PM;
         }
-        if (!t.tm_hour)
+        
+        if (!t.tm_hour) {
             t.tm_hour = 12;
+        }
+        
         ds_writebyte(DS_ADDR_HOUR, ds_int2bcd(t.tm_hour) | hmode);
+    } else {
+        ds_writebyte(DS_ADDR_HOUR, ds_int2bcd(t.tm_hour));
     }
     ds_writebyte(DS_ADDR_MINUTES, ds_int2bcd(t.tm_min));
     ds_writebyte(DS_ADDR_SECONDS, 0b10000000); // set CH, stop clock
