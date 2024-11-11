@@ -559,12 +559,23 @@ int main()
 #ifdef SIX_DIGITS                
                 flash_45 = 1;
 #endif                
-                if (ev == EV_S1_SHORT)
+                if (ev == EV_S1_SHORT) {
                     ds_sec_zero();
-                else if (ev == EV_S2_SHORT)
+                } else if (ev == EV_S2_SHORT) {
+#ifdef WITHOUT_H12_24_SWITCH
+#ifdef WITH_NMEA
+                    BACKUP_NMEA_VALUES;
+                    kmode = K_TZ_SET_HOUR;
+#else
+                    kmode = K_NORMAL;
+#endif
+#else
                     kmode = K_SET_HOUR_12_24;
+#endif
+                }
                 break;
 
+#if !defined(WITHOUT_H12_24_SWITCH)
             case K_SET_HOUR_12_24:
                 dmode = M_SET_HOUR_12_24;
                 if (ev == EV_S1_SHORT) {
@@ -572,16 +583,15 @@ int main()
                     cfg_changed = 1;
                 } else if (ev == EV_S2_SHORT) {
 #ifdef WITH_NMEA
-                    nmea_prev_tz_hr = nmea_tz_hr;
-                    nmea_prev_tz_min = nmea_tz_min;
-                    nmea_prev_tz_dst = nmea_tz_dst;
-                    nmea_prev_autosync = nmea_autosync;
+                    BACKUP_NMEA_VALUES;
                     kmode = K_TZ_SET_HOUR;
 #else
                     kmode = K_NORMAL;
 #endif
                 }
                 break;
+#endif
+
 #ifdef WITH_NMEA
             case K_TZ_SET_HOUR:
                 dmode = M_TZ_SET_TIME;
@@ -1082,6 +1092,8 @@ int main()
 #endif
                 break;
             }
+
+#if !defined(WITHOUT_H12_24_SWITCH)            
             case M_SET_HOUR_12_24:
                 if (!H12_12) {
                     filldisplay(1, 2, 0);
@@ -1092,6 +1104,7 @@ int main()
                 }
                 filldisplay(3, LED_h, 0);
                 break;
+#endif                
 
 #ifdef WITH_NMEA
             case M_TZ_SET_TIME:

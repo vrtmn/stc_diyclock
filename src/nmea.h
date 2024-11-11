@@ -19,6 +19,14 @@ uint8_t nmea_prev_tz_min;
 uint8_t nmea_prev_tz_dst;
 uint8_t nmea_prev_autosync;
 
+#define BACKUP_NMEA_VALUES                  \
+    {                                       \
+        nmea_prev_tz_hr = nmea_tz_hr;       \
+        nmea_prev_tz_min = nmea_tz_min;     \
+        nmea_prev_tz_dst = nmea_tz_dst;     \
+        nmea_prev_autosync = nmea_autosync; \
+    }
+
 #define NMEA_LINE_LEN_MAX 84
 
 __pdata char ubuf[NMEA_LINE_LEN_MAX];

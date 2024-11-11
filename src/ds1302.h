@@ -82,12 +82,17 @@
 
 uint8_t __at (0x24) rtc_table[8];
 
+#ifdef WITHOUT_H12_24_SWITCH
+#define H12_PM 0
+#define H12_12 0  // Fixed 24H format
+#else
 // h12.tenhour in RTC is at address 0x26, bit 4 -> => 0x26-0x20 => 0x6*8+4 => 52 => 0x34
-__bit __at (0x34) H12_TH;
+// __bit __at (0x34) H12_TH;
 // h12.pm in RTC is at address 0x26, bit 5 -> => 0x26-0x20 => 0x6*8+5 => 53 => 0x35
 __bit __at (0x35) H12_PM;
 // hour_12_24 in RTC is at address 0x26, bit 7 -> => 0x26-0x20 => 0x6*8+7 => 55 => 0x37
 __bit __at (0x37) H12_12;
+#endif
 
 // config in DS1302 RAM
 
@@ -141,8 +146,10 @@ void ds_init();
 // reset date/time to 01/01 00:00
 //void ds_reset_clock();
 
+#if !defined(WITHOUT_H12_24_SWITCH)
 // toggle 12/24 hour mode
 void ds_hours_12_24_toggle();
+#endif
     
 // increment hours
 void ds_hours_incr();

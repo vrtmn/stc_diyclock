@@ -172,8 +172,8 @@ void ds_reset_clock() {
 }
 */
 
+#if !defined(WITHOUT_H12_24_SWITCH)
 void ds_hours_12_24_toggle() {
-
     uint8_t hours,b;
     if (H12_12) { // 12h->24h
         hours = ds_split2int(rtc_table[DS_ADDR_HOUR] & DS_MASK_HOUR12); // hours in 12h format (1-11am 12pm 1-11pm 12am)
@@ -203,6 +203,7 @@ void ds_hours_12_24_toggle() {
 
     ds_writebyte(DS_ADDR_HOUR, b);
 }
+#endif
 
 // increment hours
 void ds_hours_incr() {

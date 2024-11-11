@@ -7,7 +7,9 @@
 
 enum display_mode {
     M_NORMAL,
+#if !defined(WITHOUT_H12_24_SWITCH)
     M_SET_HOUR_12_24,
+#endif    
 #ifdef WITH_NMEA
     M_TZ_SET_TIME,
     M_TZ_SET_DST,

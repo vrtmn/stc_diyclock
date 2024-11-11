@@ -10,7 +10,9 @@ enum keyboard_mode {
     K_SET_HOUR,
     K_SET_MINUTE,
     K_SET_SECOND,
+#if !defined(WITHOUT_H12_24_SWITCH)
     K_SET_HOUR_12_24,
+#endif    
 
 #ifdef WITH_NMEA
     K_TZ_SET_HOUR,

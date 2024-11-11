@@ -31,8 +31,9 @@ This file defines configurations for clock models.
 #define WITHOUT_WEEKDAY
 #define MAP_SW2_TO_P1_4
 #define WITH_NMEA_DEVICE_SWITCH
+#define WITHOUT_H12_24_SWITCH
 // #define DEBUG
 
-#endif
+#endif  // #elif GREEN_6
 
 #endif // #ifndef MODELS_H
