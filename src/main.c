@@ -1169,11 +1169,18 @@ int main()
                 break;
             }
             case M_TZ_SET_DST:
-                filldisplay(0, 'D'-'A'+LED_a, 0);
-                filldisplay(1, 'S'-'A'+LED_a, 0);
-                filldisplay(2, 'T'-'A'+LED_a, 0);
-#ifdef SIX_DIGITS                
-                filldisplay(4, nmea_tz_dst, 0);
+                filldisplay(0, 'D'-'A' + LED_a, 0);
+                filldisplay(1, 'S'-'A' + LED_a, 0);
+                filldisplay(2, 'T'-'A' + LED_a, 0);
+#ifdef SIX_DIGITS              
+                if (nmea_tz_dst) {
+                    filldisplay(4, 'O'-'A' + LED_a, 0);
+                    filldisplay(5, 'N'-'A' + LED_a, 0);
+                } else {
+                    filldisplay(3, 'O'-'A' + LED_a, 0);
+                    filldisplay(4, LED_f, 0);
+                    filldisplay(5, LED_f, 0);
+                }
 #else
                 filldisplay(3, nmea_tz_dst, 0);
 #endif                
