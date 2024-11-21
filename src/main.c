@@ -1115,6 +1115,34 @@ int main()
 #ifdef WITH_NMEA
             case M_TZ_SET_TIME:
             {
+#ifdef SIX_DIGITS
+                filldisplay(0, 'T'-'A' + LED_a, 0);
+                int8_t hh = nmea_tz_hr;
+                if (hh < 0) {
+                    hh = -hh;
+                    if (hh < 10) {
+                        filldisplay(2, LED_DASH, 0);
+                    } else {
+                        filldisplay(1, LED_DASH, 0);                    
+                    }
+                } else {
+                    filldisplay(1, LED_BLANK, 0);
+                    filldisplay(2, LED_BLANK, 0);
+                }
+                dotdisplay(3, 1);
+                dotdisplay(4, 1);
+
+                if (!flash_01 || blinker_fast || S1_LONG) {
+                    if (hh >= 10) {
+                        filldisplay(2, 1, 0);
+                    }
+                    filldisplay(3, hh % 10, 0);
+                }
+                if (!flash_23 || blinker_fast || S1_LONG) {
+                    filldisplay(4, nmea_tz_min / 10, 0);
+                    filldisplay(5, nmea_tz_min % 10, 0);
+                }
+#else
                 int8_t hh = nmea_tz_hr;
                 if (hh < 0) {
                     hh = -hh;
@@ -1134,9 +1162,10 @@ int main()
                     filldisplay(1, hh % 10, 0);
                 }
                 if (!flash_23 || blinker_fast || S1_LONG) {
-                    filldisplay(2, nmea_tz_min/10, 0);
-                    filldisplay(3, nmea_tz_min%10, 0);
+                    filldisplay(2, nmea_tz_min / 10, 0);
+                    filldisplay(3, nmea_tz_min % 10, 0);
                 }
+#endif
                 break;
             }
             case M_TZ_SET_DST:
