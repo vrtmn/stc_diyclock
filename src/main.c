@@ -550,7 +550,16 @@ int main()
                 #ifdef SIX_DIGITS
                     kmode = K_SET_SECOND;
                 #else
+#ifdef WITHOUT_H12_24_SWITCH
+#ifdef WITH_NMEA
+                    BACKUP_NMEA_VALUES;
+                    kmode = K_TZ_SET_HOUR;
+#else
+                    kmode = K_NORMAL;
+#endif
+#else
                     kmode = K_SET_HOUR_12_24;
+#endif
                 #endif
                 }
                 break;
