@@ -26,7 +26,10 @@
 uint8_t hex[] = {0,1,2,3,4,5,6,7,8,9,14,15,16,17,18,19};
 #endif
 
+#ifndef LIGHTVAL_LOWEST_VALUE
 #define LIGHTVAL_LOWEST_VALUE   4           // Max. brightness
+#endif
+
 #define LIGHTVAL_HIGHEST_VALUE  36          // Min. brightness
 
 #define LIGHT_SENSOR_NIGHT_TH   245         // Night mode threshold
