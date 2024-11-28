@@ -32,7 +32,18 @@ uint8_t nmea_prev_autosync;
 __pdata char ubuf[NMEA_LINE_LEN_MAX];
 volatile int8_t uidx = 0;
 
-__code const char NMEA_TOKEN[] = "$GPRMC";
+/*
+RMC heades:
+https://docs.novatel.com/OEM7/Content/Logs/GPRMC.htm
+
+Example 1 (GPS):
+$GPRMC,203522.00,A,5109.0262308,N,11401.8407342,W,0.004,133.4,130522,0.0,E,D*2B
+
+Example 2 (Multi-constellation):
+$GNRMC,204520.00,A,5109.0262239,N,11401.8407338,W,0.004,102.3,130522,0.0,E,D*3B
+*/
+
+__code const char *RMC_HEADERS[] = {"$GPRMC", "$GNRMC"};
 
 volatile enum {
     NMEA_NONE = 0,
@@ -139,8 +150,9 @@ void uart1_isr() __interrupt(4) __using(2)
                 ubuf[uidx++] = ch;
                 if (nmea_state == NMEA_PARSE) {
                     // $GPRMC,232231.00,A,,,,,,,170420,,,*27
-                    if (uidx >= sizeof(NMEA_TOKEN) - 1 + 12 + 1 + 5 + 12 && // 12 commas, A , *XX\r\n, hhmmss DDMMYY
-                        !nmea_cmp(ubuf, NMEA_TOKEN, sizeof(NMEA_TOKEN) - 1) && // correct head
+                    if (uidx >= sizeof(RMC_HEADERS[0]) - 1 + 12 + 1 + 5 + 12 && // 12 commas, A , *XX\r\n, hhmmss DDMMYY
+                        (!nmea_cmp(ubuf, RMC_HEADERS[0], sizeof(RMC_HEADERS[0]) - 1) ||
+                        !nmea_cmp(ubuf, RMC_HEADERS[1], sizeof(RMC_HEADERS[1]) - 1)) &&
                         (p = nmea_comma(2)) && *(p + 1) == 'A' && // valid NMEA
                         nmea_comma(2) - nmea_comma(1) >= 7 && // time length
                         nmea_comma(10) - nmea_comma(9) == 7 && // date length
