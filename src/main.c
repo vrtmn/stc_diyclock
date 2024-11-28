@@ -60,11 +60,13 @@ void _delay_ms(uint8_t ms)
 uint8_t  count;     // main loop counter
 uint8_t  temp;      // temperature sensor value
 uint8_t  lightval;  // light sensor value
+uint8_t previous_second = 0;
 
 volatile uint8_t displaycounter;
 volatile int8_t count_100;	//0.01s=10ms
 volatile int8_t count_1000;	//0.1s=100ms
 volatile int8_t count_5000;	//0.5s=500ms
+volatile int8_t count_blinker_slow;	//0.5s=500ms
 #ifndef WITHOUT_ALARM
 volatile int16_t count_20000;	//2s
 volatile __bit blinker_slowest;
@@ -202,13 +204,31 @@ void timer0_isr() __interrupt(1) __using(1)
             loop_gate = 1;	//every 100ms
 
             count_5000++; // increment every 100ms
+            count_blinker_slow++;
 #ifndef WITHOUT_ALARM
             count_20000++; // increment every 100ms
 #endif
+            /*
+            Align the blinker slow counter with the actual time (seconds).
+            This is essential for the HH:MM:SS model - the blinking dots must be 
+            in sync with the changing seconds to look nice.
+            */
+            if (0 == previous_second) { // initial value
+                previous_second = rtc_table[DS_ADDR_SECONDS];
+            } else if (rtc_table[DS_ADDR_SECONDS] != previous_second) {                
+                count_blinker_slow = 1;
+                blinker_slow = 1;
+                previous_second = rtc_table[DS_ADDR_SECONDS];
+            }
+            
+            if (count_blinker_slow == 5) {  // 500 ms
+                count_blinker_slow = 0;
+                blinker_slow = !blinker_slow; // blink every 500ms
+            }
+
             // 2/sec: 500 ms
             if (count_5000 == 5) {
                 count_5000 = 0;
-                blinker_slow = !blinker_slow; // blink every 500ms
 #if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
                 if (!blinker_slow && corr_remaining) {
                     corr_remaining--;
