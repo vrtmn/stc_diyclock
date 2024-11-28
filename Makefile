@@ -9,9 +9,9 @@ SDCCOPTS ?= --code-size $(STCCODESIZE) --xram-size 0 --data-loc 0x30 --disable-w
 endif
 
 SDCCREV ?= -Dstc15f204ea
-STCGAL ?= stcgal/stcgal.py
+STCGAL ?= stcgal
 STCGALOPTS ?= 
-STCGALPORT ?= /dev/ttyUSB0
+STCGALPORT ?= /dev/tty.usbmodem588B0417091
 STCGALPROT ?= auto
 FLASHFILE ?= main.hex
 SYSCLK ?= 11059
