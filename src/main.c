@@ -1422,7 +1422,7 @@ int main()
 #endif
 
         __critical {
-            updateTmpDisplay();
+            updateFrameBuffer();
         }
 
         count++;
