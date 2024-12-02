@@ -57,15 +57,16 @@ void _delay_ms(uint8_t ms)
 }
 */
 
-uint8_t  count;     // main loop counter
-uint8_t  temp;      // temperature sensor value
-uint8_t  lightval;  // light sensor value
+uint8_t count;     // main loop counter
+uint8_t temp;      // temperature sensor value
+uint8_t lightval;  // light sensor value
 uint8_t previous_second = 0;
 
 volatile uint8_t displaycounter;
-volatile int8_t count_100;	//0.01s=10ms
-volatile int8_t count_1000;	//0.1s=100ms
-volatile int8_t count_5000;	//0.5s=500ms
+volatile int8_t count_100;	        //0.01s=10ms
+volatile int8_t count_1000;	        //0.1s=100ms
+volatile int8_t count_5000;	        //0.5s=500ms
+volatile int8_t count_10000;        //1s=1000ms
 volatile int8_t count_blinker_slow;	//0.5s=500ms
 #ifndef WITHOUT_ALARM
 volatile int16_t count_20000;	//2s
@@ -205,6 +206,7 @@ void timer0_isr() __interrupt(1) __using(1)
 
             count_5000++; // increment every 100ms
             count_blinker_slow++;
+            count_10000++;
 #ifndef WITHOUT_ALARM
             count_20000++; // increment every 100ms
 #endif
@@ -234,12 +236,6 @@ void timer0_isr() __interrupt(1) __using(1)
                     corr_remaining--;
                 }
 #endif
-#if defined(WITH_NMEA)
-                if (IS_NMEA_AUTOSYNC_ON && !blinker_slow && 
-                    nmea_seconds_to_sync && !--nmea_seconds_to_sync) {
-                    enable_nmea_receiving();
-                }
-#endif
 #ifndef WITHOUT_ALARM
                 // 1/ 2sec: 20000 ms
                 if (count_20000 == 20) {
@@ -247,6 +243,21 @@ void timer0_isr() __interrupt(1) __using(1)
                 }
                 // 500 ms on=true=1, 1500 ms off=false=0
                 blinker_slowest = count_20000 < 5;
+#endif
+            }
+
+            // 1 sec
+            if (10 == count_10000) {
+                count_10000 = 0;
+
+#if defined(WITH_NMEA)
+                if (nmea_seconds_to_sync > 0) {
+                    nmea_seconds_to_sync--;
+                }
+                
+                if (IS_NMEA_AUTOSYNC_ON && !blinker_slow && 0 == nmea_seconds_to_sync) {
+                    enable_nmea_receiving();
+                }
 #endif
             }
         }
@@ -382,6 +393,7 @@ int main()
 #ifdef WITH_NMEA
     uart1_init();   // setup uart
     nmea_load_tz(); // read TZ/DST from eeprom
+    nmea_seconds_to_sync = NMEA_AUTOSYNC_DELAY;
 #endif
 
     // LOOP
