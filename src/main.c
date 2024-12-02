@@ -136,7 +136,7 @@ volatile __bit S1_LONG;
 volatile __bit S1_PRESSED;
 volatile __bit S2_LONG;
 volatile __bit S2_PRESSED;
-#ifdef stc15w408as
+#ifdef HW_REVISION_WITH_VOICE_CHIP
 volatile __bit S3_LONG;
 volatile __bit S3_PRESSED;
 #endif
@@ -265,7 +265,7 @@ void timer0_isr() __interrupt(1) __using(1)
         // Check SW status and chattering control
         MONITOR_S(1);
         MONITOR_S(2);
-#ifdef stc15w408as
+#ifdef HW_REVISION_WITH_VOICE_CHIP
         MONITOR_S(3);
 #endif
 
@@ -990,7 +990,7 @@ int main()
                 } else if (ev == EV_S2_SHORT) {
                     kmode = K_TEMP_DISP;
                 }
-#ifdef stc15w408as
+#ifdef HW_REVISION_WITH_VOICE_CHIP
                 else if (ev == EV_S3_LONG) {
                     LED = !LED;
                 }

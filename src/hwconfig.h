@@ -1,88 +1,51 @@
 // hardware definitions
 
 // as we start to discover different hw variants with various features, chipsets, pinouts, etc
-// we can capture things like HW_MODEL_C to describe this, in absence of any more descriptive naming
+// we can capture things like HW_REVISION_C to describe this, in absence of any more descriptive naming
 
 #ifndef HWCONFIG_H
 #define HWCONFIG_H
 
 #include "models.h"
 
+#ifdef HW_REVISION_A
+ #define BUZZER     P1_5
+ #define BUZZER_ON  (BUZZER = 0)
+ #define BUZZER_OFF (BUZZER = 1)
+ #define ADC_LIGHT  6
+ #define ADC_TEMP   7
+ // offset where the digits start on LED_DIGITS_PORT
+ #define LED_DIGITS_PORT_BASE   2
+ #define NUM_SW     2
+#elif HW_REVISION_WITH_VOICE_CHIP
+ // revision with stc15w408as (with voice chip)
+ #define LED            P1_5
+ #define BUZZER_ON
+ #define BUZZER_OFF
+ #define ADC_LIGHT      6
+ #define ADC_TEMP       7
+ #define LED_DIGITS_PORT_BASE   2
+ #define NUM_SW         2
+#elif HW_REVISION_C
 /*
-    HW_MODEL_C described @
-    https://github.com/zerog2k/stc_diyclock/issues/20
+ Another model with STC15F204, but diff pinouts, described here:
+ https://github.com/zerog2k/stc_diyclock/issues/20
 */
-
-// alias for relay and buzzer outputs, using relay to drive led for indication of main loop status
-// only for revision with stc15f204ea
-#if defined stc15f204ea || defined stc15w404as
- #define RELAY   P1_4
- #define BUZZER  P1_5
- #define BUZZER_ON  BUZZER = 0
- #define BUZZER_OFF BUZZER = 1
-
-#elif defined HW_MODEL_C
-// another model with STC15F204, but diff pinouts
- #define RELAY
  #define BUZZER     P3_3
  #define BUZZER_ON  BUZZER = 0
  #define BUZZER_OFF BUZZER = 1
-
- // additional pins on P3 header: P3_6 P3_7
-#else // revision with stc15w408as (with voice chip)
- #define LED     P1_5
- #define BUZZER_ON
- #define BUZZER_OFF
-#endif
-
-#if defined(WITH_NMEA) && defined(WITH_NMEA_DEVICE_SWITCH)
-#define NMEA_DEVICE_PORT P1_3
-#define NMEA_DEVICE_ON (NMEA_DEVICE_PORT=0)
-#define NMEA_DEVICE_OFF (NMEA_DEVICE_PORT=1)
-#endif 
-
-// 7-seg led port setup
-
-// which port the segments are connected to
-#define LED_SEGMENT_PORT P2
-// which port controls the digits
-#define LED_DIGITS_PORT  P3
-
-// offset where the digits start on LED_DIGITS_PORT
-#if defined HW_MODEL_C
+ #define ADC_LIGHT  3
+ #define ADC_TEMP   6
  #define LED_DIGITS_PORT_BASE   4
-#else
- #define LED_DIGITS_PORT_BASE   2
+ #define SW3        P1_4
+ #define NUM_SW     3
 #endif
 
-// setup macro mask to turn off digits
-#ifdef SIX_DIGITS
-#define DIGITS_MASK 0b111111
-#else
-#define DIGITS_MASK 0b1111
-#endif
-#define LED_DIGITS_OFF()    ( LED_DIGITS_PORT |= (DIGITS_MASK << LED_DIGITS_PORT_BASE))
+//
+// Buttons
+// 
 
-// setup macro to turn on single digit
-#define LED_DIGIT_ON(digit) (LED_DIGITS_PORT &= ~((1<<LED_DIGITS_PORT_BASE) << digit))
-
-// adc channels for sensors, P1_n
-#if defined HW_MODEL_C
- #define ADC_LIGHT 3
- #define ADC_TEMP  6
-#else
- #define ADC_LIGHT 6
- #define ADC_TEMP  7
-#endif
-
-// button switch aliases
-// SW3 only for revision with stc15w408as
-#ifdef stc15w408as
- #define SW3     P1_4
- #define NUM_SW 3
-#else
- #define NUM_SW 2
-#endif
+#define SW1     P3_1
 
 #ifdef MAP_SW2_TO_P1_4
 #define SW2     P1_4
@@ -90,10 +53,49 @@
 #define SW2     P3_0
 #endif
 
-#define SW1     P3_1
+//
+// NMEA
+// 
 
-// ds1302 pins
-#if defined HW_MODEL_C
+#if defined(WITH_NMEA) && defined(WITH_NMEA_DEVICE_SWITCH)
+#define NMEA_DEVICE_PORT P1_3
+#define NMEA_DEVICE_ON (NMEA_DEVICE_PORT=0)
+#define NMEA_DEVICE_OFF (NMEA_DEVICE_PORT=1)
+#endif 
+
+//
+// 7-seg LEDs
+//
+
+// Which port the segments are connected to
+#define LED_SEGMENT_PORT P2
+// Which port controls the digits
+#define LED_DIGITS_PORT  P3
+
+// Number of digits
+#ifdef SIX_DIGITS
+#define NUMBER_OF_DIGITS 6
+#else
+#define NUMBER_OF_DIGITS 4
+#endif
+
+// Macro mask to turn off digits
+#ifdef SIX_DIGITS
+#define DIGITS_MASK 0b111111
+#else
+#define DIGITS_MASK 0b1111
+#endif
+
+#define LED_DIGITS_OFF()    ( LED_DIGITS_PORT |= (DIGITS_MASK << LED_DIGITS_PORT_BASE))
+
+// Macro to turn on single digit
+#define LED_DIGIT_ON(digit) (LED_DIGITS_PORT &= ~((1<<LED_DIGITS_PORT_BASE) << digit))
+
+//
+// DS1302 pins
+//
+
+#ifdef HW_REVISION_C
  #define DS_CE    P0_0
  #define DS_IO    P0_1
  #define DS_SCLK  P3_2
@@ -109,10 +111,4 @@
  #define _DS_SCLK _P1_2
 #endif
 
-#ifdef SIX_DIGITS
-#define NUMBER_OF_DIGITS 6
-#else
-#define NUMBER_OF_DIGITS 4
-#endif
-
-#endif
+#endif // #define HWCONFIG_H

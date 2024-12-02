@@ -8,7 +8,7 @@ enum Event {
     EV_S2_SHORT,
     EV_S2_LONG,
     EV_S1S2_LONG,
-#ifdef stc15w408as
+#ifdef HW_REVISION_WITH_VOICE_CHIP
     EV_S3_SHORT,
     EV_S3_LONG,
 #endif

@@ -8,7 +8,6 @@ STCCODESIZE ?= 4089
 SDCCOPTS ?= --code-size $(STCCODESIZE) --xram-size 0 --data-loc 0x30 --disable-warning 126 --disable-warning 59 --disable-warning 283
 endif
 
-SDCCREV ?= -Dstc15f204ea
 STCGAL ?= stcgal
 STCGALOPTS ?= 
 STCGALPORT ?= /dev/tty.usbmodem588B0417091
@@ -35,10 +34,10 @@ all: main
 
 build/%.rel: src/%.c src/%.h
 	mkdir -p $(dir $@)
-	$(SDCC) $(SDCCOPTS) $(SDCCREV) -o $@ -c $<
+	$(SDCC) $(SDCCOPTS) -o $@ -c $<
 
 main: $(OBJ)
-	$(SDCC) -o build/ src/$@.c $(SDCCOPTS) $(SDCCREV) $(CFLAGS) $^
+	$(SDCC) -o build/ src/$@.c $(SDCCOPTS) $(CFLAGS) $^
 	@ tail -n 5 build/main.mem | head -n 2
 	@ tail -n 1 build/main.mem
 	cp build/$@.ihx $@.hex

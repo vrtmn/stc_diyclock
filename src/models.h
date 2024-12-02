@@ -10,8 +10,8 @@ This file defines configurations for clock models.
 #ifdef GREEN_4
 // Greek clock, 4 digits, HH:mm
 
+#define HW_REVISION_A
 #define FOUR_DIGITS
-
 #define AUTO_SHOW_TEMPERATURE 
 #define WITHOUT_DATE
 #define WITHOUT_CHIME
@@ -24,6 +24,7 @@ This file defines configurations for clock models.
 #elif GREEN_6
 // Greek clock, 6 digits, HH:mm:ss
 
+#define HW_REVISION_A
 #define SIX_DIGITS
 #define WITHOUT_CHIME
 #define AUTO_SHOW_TEMPERATURE 
