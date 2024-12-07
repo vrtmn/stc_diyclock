@@ -1442,10 +1442,10 @@ int main()
 
 #ifdef WITH_NMEA
         if (is_nmea_receiving_on) {
-            if (nmea_state == NMEA_SET || ++nmea_progress_seconds >= NMEA_MAX_SYNC_DURATION) {
+            if (nmea_state == NMEA_READY || ++nmea_progress_seconds >= NMEA_MAX_SYNC_DURATION) {
                 disable_nmea_receiving();
                 
-                if (nmea_state == NMEA_SET) {
+                if (nmea_state == NMEA_READY) {
                     nmea2localtime();
                 }
 

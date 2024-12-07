@@ -27,10 +27,15 @@ uint8_t nmea_prev_autosync;
         nmea_prev_autosync = nmea_autosync; \
     }
 
-#define NMEA_LINE_LEN_MAX 84
+#define NMEA_LINE_MAX_LEN 84
+#define NMEA_LINE_MIN_LEN 39
+#define NMEA_COMMA_TIME 1
+#define NMEA_COMMA_STATUS 2
+#define NMEA_COMMA_DATE 9
 
-__pdata char ubuf[NMEA_LINE_LEN_MAX];
-volatile int8_t uidx = 0;
+// Contains the received NMEA sentence
+__pdata char nmeaBuffer[NMEA_LINE_MAX_LEN];
+volatile int8_t nmeaSentenceLength = 0;
 
 /*
 RMC heades:
@@ -41,15 +46,19 @@ $GPRMC,203522.00,A,5109.0262308,N,11401.8407342,W,0.004,133.4,130522,0.0,E,D*2B
 
 Example 2 (Multi-constellation):
 $GNRMC,204520.00,A,5109.0262239,N,11401.8407338,W,0.004,102.3,130522,0.0,E,D*3B
+
+Example 3 (NTP):
+$GPRMC,232231.00,A,,,,,,,170420,,,*27
 */
 
+#define RMC_HEADER_LENGTH 6
 __code const char *RMC_HEADERS[] = {"$GPRMC", "$GNRMC"};
 
 volatile enum {
     NMEA_NONE = 0,
-    NMEA_START,
-    NMEA_PARSE,
-    NMEA_SET
+    NMEA_RECEIVING,
+    NMEA_VALIDATE,
+    NMEA_READY
 } nmea_state = NMEA_NONE;
 
 // Auto sync interval, hours
@@ -83,19 +92,19 @@ void uart1_init()
     REN = 1;
 }
 
-// return pointer to comma N num in ubuf
-char *nmea_comma(uint8_t num)
+// Returns a pointer to a comma number N in nmeaBuffer
+char *nmeaGetComma(uint8_t num)
 {
-    for (int8_t i = 0; i != uidx; i++) {
-        if (ubuf[i] == ',' && !--num) {
-            return ubuf + i;
+    for (int8_t i = 0; i != nmeaSentenceLength; i++) {
+        if (nmeaBuffer[i] == ',' && !--num) {
+            return nmeaBuffer + i;
         }
     }
     return NULL;
 }
 
-// just simple memcmp, ret 0 == equal
-int8_t nmea_cmp(char *dst, char *src, uint8_t n)
+// Compares the first n characters of two given strings. Returns 0 if they are equal, otherwise - 1.
+inline int8_t nmea_strcmp(const char *dst, const char *src, uint8_t n)
 {
     while (n--) {
         if (*dst++ != *src++)
@@ -104,77 +113,143 @@ int8_t nmea_cmp(char *dst, char *src, uint8_t n)
     return 0;
 }
 
-// just simple memcpy
-void nmea_cpy(uint8_t *dst, uint8_t *src, uint8_t n)
+// Converts a single hex char into an integer
+uint8_t hexChar2Int(const char *ch) 
 {
-    while (n--)
-        *dst++ = *src++;
+    if (*ch >= 'a')
+        return *ch - 'a' + 10;
+    else if (*ch >= 'A')
+        return *ch - 'A' + 10;
+    else
+        return *ch - '0';
 }
 
-// ret 0 == valid crc
-uint8_t nmea_crc_check()
+//
+// Validation
+// 
+
+// Returns 'true' (1) if the received string has a valid length
+inline __bit isNmeaLengthValid() 
 {
-    char *p = ubuf + 1;
-    uint8_t crc = 0;
-    while (*p != '*') {
-        crc ^= *p;
-        p++;
-    }
-    return ((((*(++p) - '0') & 0x0f) << 4) & ((*(++p) - '0') & 0x0f)) ^ crc;
+    return nmeaSentenceLength >= NMEA_LINE_MIN_LEN;
 }
+
+// Returns 'true' (1) if the received string starts with a correct RMC header
+inline __bit isNmeaHeaderValid()
+{
+    return 0 == nmea_strcmp(nmeaBuffer, RMC_HEADERS[0], RMC_HEADER_LENGTH) ||
+           0 == nmea_strcmp(nmeaBuffer, RMC_HEADERS[1], RMC_HEADER_LENGTH);
+}
+
+// Returns 'true' (1) if the received string contains a valid status
+inline __bit isNmeaStatusValid() 
+{    
+    char *p;
+    return (p = nmeaGetComma(NMEA_COMMA_STATUS)) && (*(p + 1) == 'A');
+}
+
+// Returns 'true' (1) if the received NMEA string has a correct CRC
+__bit isNmeaCRCValid()
+{
+    char *p = nmeaBuffer + 1;
+    uint8_t calculatedCRC = 0;
+    for (int8_t i = 0; *p != '*' && i != nmeaSentenceLength; i++) {
+        calculatedCRC ^= *p++;
+    }
+    uint8_t receivedCRC = ((hexChar2Int(p + 1) & 0xF) << 4) | (hexChar2Int(p + 2) & 0xF);
+    return receivedCRC == calculatedCRC;
+}
+
+// Returns 'true' (1) if the received NMEA string has a correct trail
+inline __bit isNmeaTrailValid()
+{
+    return *(nmeaBuffer + nmeaSentenceLength - 1) == '\n' &&
+           *(nmeaBuffer + nmeaSentenceLength - 2) == '\r';
+}
+
+// Returns 'true' (1) if the received NMEA string contains a valid time (date) substring
+__bit isNmeaTimeDateValid(uint8_t comma) {
+    char *p = nmeaGetComma(comma);
+    if (NULL == p) {
+        return 0;
+    }
+
+    for (int8_t n = 1; n <= 6; n++) {
+        if (*(p + n) < '0' || *(p + n) > '9')  {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+// Returns 'true' (1) if the received string is a valid NMEA sentence
+__bit isNmeaSentenceValid()
+{
+    return isNmeaLengthValid() &&
+           isNmeaHeaderValid() &&
+           isNmeaStatusValid() &&
+           isNmeaTimeDateValid(NMEA_COMMA_TIME) &&
+           isNmeaTimeDateValid(NMEA_COMMA_DATE) &&
+           isNmeaTrailValid() &&
+           isNmeaCRCValid();
+}
+
+//
+// Receiving
+//
 
 void uart1_isr() __interrupt(4) __using(2)
 {
-    char *p;
-    if (RI) {
-        RI = 0;                 // clear int
-        if (nmea_state != NMEA_SET && nmea_state != NMEA_PARSE) {
-            char ch = SBUF;
-            switch (ch) {
-            case '$':
-                uidx = 0;
-                nmea_state = NMEA_START;
-                break;
-            case '\n':
-                if (nmea_state != NMEA_START)
-                    nmea_state = NMEA_NONE;
-                else
-                    nmea_state = NMEA_PARSE;
-                break;
-            default:
-                if (nmea_state != NMEA_START)
-                    nmea_state = NMEA_NONE;
-                break;
+    if (!RI) {
+        return;
+    }
+    
+    RI = 0;
+    if (nmea_state != NMEA_READY && nmea_state != NMEA_VALIDATE) {
+        char ch = SBUF;
+        switch (ch) {
+        case '$':
+            nmeaSentenceLength = 0;
+            nmea_state = NMEA_RECEIVING;
+            break;
+        case '\n':
+            if (nmea_state == NMEA_RECEIVING)
+                nmea_state = NMEA_VALIDATE;
+            else
+                nmea_state = NMEA_NONE;
+            break;
+        default:
+            if (nmea_state != NMEA_RECEIVING)
+                nmea_state = NMEA_NONE;
+            break;
+        }
+
+        if (nmea_state == NMEA_NONE) {
+            return;
+        }
+
+        nmeaBuffer[nmeaSentenceLength++] = ch;
+
+        if (nmea_state == NMEA_VALIDATE) {
+            if (isNmeaSentenceValid()) {
+                nmea_state = NMEA_READY;
+                loop_gate = 1; // force main loop
+            } else {
+                // bad line, reset
+                nmeaSentenceLength = 0;
+                nmea_state = NMEA_NONE;
             }
-            if (nmea_state != NMEA_NONE) {
-                ubuf[uidx++] = ch;
-                if (nmea_state == NMEA_PARSE) {
-                    // $GPRMC,232231.00,A,,,,,,,170420,,,*27
-                    if (uidx >= sizeof(RMC_HEADERS[0]) - 1 + 12 + 1 + 5 + 12 && // 12 commas, A , *XX\r\n, hhmmss DDMMYY
-                        (!nmea_cmp(ubuf, RMC_HEADERS[0], sizeof(RMC_HEADERS[0]) - 1) ||
-                        !nmea_cmp(ubuf, RMC_HEADERS[1], sizeof(RMC_HEADERS[1]) - 1)) &&
-                        (p = nmea_comma(2)) && *(p + 1) == 'A' && // valid NMEA
-                        nmea_comma(2) - nmea_comma(1) >= 7 && // time length
-                        nmea_comma(10) - nmea_comma(9) == 7 && // date length
-                        (p = nmea_comma(12)) && (*(p + 1) == '*' || *(++p + 1) == '*') &&
-                        p + 6 - ubuf == uidx && // correct length
-                        *(p + 4) == '\r' && *(p + 5) == '\n' && // correct tail
-                        nmea_crc_check()) { // correct crc
-                        nmea_state = NMEA_SET;
-                        loop_gate = 1; // force main loop
-                    } else {
-                        // bad line, reset
-                        uidx = 0;
-                        nmea_state = NMEA_NONE;
-                    }
-                } else if (uidx >= NMEA_LINE_LEN_MAX) {
-                    uidx = 0;
-                    nmea_state = NMEA_NONE;
-                }
-            }
+        } else if (nmeaSentenceLength >= NMEA_LINE_MAX_LEN) {
+            nmeaSentenceLength = 0;
+            nmea_state = NMEA_NONE;
         }
     }
 }
+
+//
+// Parsing
+// 
 
 uint8_t char2int(char *p)
 {
@@ -209,10 +284,10 @@ uint8_t days_per_month(uint16_t year, uint8_t month)
 void nmea_apply_tz(struct tm *t)
 {
     int8_t hdiff = nmea_tz_hr;
-    // if (t->tm_sec < 59)
-    //     t->tm_sec ++; // just 1 sec compensation for nmea transfer delay
-    if (nmea_tz_dst)
+    if (nmea_tz_dst) {
         hdiff++;
+    }
+
     if (nmea_tz_min) {
         if (hdiff >= 0) {
             // positive TZ
@@ -229,6 +304,7 @@ void nmea_apply_tz(struct tm *t)
                 t->tm_min = t->tm_min - nmea_tz_min;
         }
     }
+
     if (hdiff > 0) {
         // positive TZ
         if ((t->tm_hour = t->tm_hour + hdiff) >= 24) {
@@ -267,16 +343,16 @@ void nmea_apply_tz(struct tm *t)
     }
 }
 
-void nmea2localtime(void)
+void nmea2localtime()
 {
     char *p;
     struct tm t;
     // $GPRMC,232231.00,A,,,,,,,170420,,,*27
-    p = nmea_comma(9) + 1;
+    p = nmeaGetComma(NMEA_COMMA_DATE) + 1;
     t.tm_mday = char2int(p);          // day
     t.tm_mon = char2int(p + 2) - 1;     // month, 0 = jan
     t.tm_year = char2int(p + 4) + 100;  // year - 1900
-    p = nmea_comma(1) + 1;
+    p = nmeaGetComma(NMEA_COMMA_TIME) + 1;
     t.tm_hour = char2int(p);
     t.tm_min = char2int(p + 2);
     t.tm_sec = char2int(p + 4);
