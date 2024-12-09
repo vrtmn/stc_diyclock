@@ -26,7 +26,7 @@ else ifeq ($(GREEN4), 1)
 CFLAGS += -DGREEN_4
 endif
 
-SRC = src/adc.c src/ds1302.c
+SRC = src/adc.c src/ds1302.c src/eeprom.c
 
 OBJ=$(patsubst src%.c,build%.rel, $(SRC))
 
