@@ -36,7 +36,6 @@ uint8_t hex[] = {0,1,2,3,4,5,6,7,8,9,14,15,16,17,18,19};
 #define LIGHTVAL_NIGHT_VALUE    52          // Night brightness
 #define LIGHT_SENSOR_MAX_VALUE  (255 - (255 - LIGHT_SENSOR_NIGHT_TH))
 
-/* ------------------------------------------------------------------------- */
 /*
 void _delay_ms(uint8_t ms)
 {
@@ -177,7 +176,7 @@ void timer0_isr() __interrupt(1) __using(1)
     // auto dimming, skip lighting for some cycles
     if (displaycounter % lightval < NUMBER_OF_DIGITS) {
         // fill digits
-        LED_SEGMENT_PORT = dbuf[digit];
+        LED_SEGMENT_PORT = displayBuffer[digit];
         // turn on selected digit, set low
         //LED_DIGIT_ON(digit);
         // issue #32, fix for newer sdcc versions which are using non-atomic port access
@@ -1000,7 +999,7 @@ int main()
         /////////////////////////////////////////////////////////////////////
         // display execution tree
 
-        clearTmpDisplay();
+        clearFrameBuffer();
 
         dmode_bak = dmode;
 
@@ -1071,8 +1070,8 @@ int main()
                     if (H12_12 && h0 == 0) {
                         h0 = LED_BLANK;
                     }
-                    filldisplay(0, h0, 0);
-                    filldisplay(1, hh & 0x0F, 0);
+                    fillDigit(0, h0, 0);
+                    fillDigit(1, hh & 0x0F, 0);
                 }
 
                 if (!flash_23 || blinker_fast || S1_LONG) {
@@ -1083,33 +1082,33 @@ int main()
                         if (H12_12 && m0 == 0) {
                             m0 = LED_BLANK;
                         }
-                        filldisplay(2, m0, 0);
+                        fillDigit(2, m0, 0);
                     } else
 #endif
-                    filldisplay(2, mm >> 4, 0);
+                    fillDigit(2, mm >> 4, 0);
 #ifdef SIX_DIGITS
-                    filldisplay(3, mm & 0x0F, dmode == M_NORMAL ? blinker_slow : 0);
+                    fillDigit(3, mm & 0x0F, dmode == M_NORMAL ? blinker_slow : 0);
 #else
-                    filldisplay(3, mm & 0x0F, 0);
+                    fillDigit(3, mm & 0x0F, 0);
 #endif
                 }
 
 #ifdef SIX_DIGITS
                 if (!flash_45 || blinker_fast || S1_LONG) {                    
                     if (dmode == M_NORMAL) {
-                        filldisplay(4, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), blinker_slow);
-                        filldisplay(5, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
+                        fillDigit(4, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), blinker_slow);
+                        fillDigit(5, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
                     }
 #ifndef WITHOUT_ALARM
                     else if (dmode == M_ALARM) {
                         // Show letter 'A' for the alarm mode
-                        filldisplay(5, LED_a, 0);
+                        fillDigit(5, LED_a, 0);
                     }
 #endif                    
 #ifndef WITHOUT_CHIME
                     else if (dmode == M_CHIME) {
                         // Show letter 'A' for the alarm mode
-                        filldisplay(5, LED_c, 0);
+                        fillDigit(5, LED_c, 0);
                     }
 #endif
                 }
@@ -1119,8 +1118,8 @@ int main()
 #ifndef WITHOUT_CHIME
                     if (dmode != M_CHIME) {
 #endif
-                    dotdisplay(1, 1);
-                    dotdisplay(2, 1);
+                    fillDot(1, 1);
+                    fillDot(2, 1);
 #ifndef WITHOUT_CHIME
                 }
 #endif
@@ -1128,17 +1127,17 @@ int main()
 #ifndef WITHOUT_CHIME
                 if (dmode == M_CHIME) {
 #ifdef SIX_DIGITS
-                    dotdisplay(4, CONF_CHIME_ON);
+                    fillDot(4, CONF_CHIME_ON);
 #else
-                    dotdisplay(2, CONF_CHIME_ON);
+                    fillDot(2, CONF_CHIME_ON);
 #endif                    
-                    dotdisplay(1, chime_ss_pm);
+                    fillDot(1, chime_ss_pm);
                 }
 #endif
 #ifdef SIX_DIGITS
-                dotdisplay(5, preparepm(pm));
+                fillDot(5, preparepm(pm));
 #else
-                dotdisplay(3, preparepm(pm));
+                fillDot(3, preparepm(pm));
 #endif
                 break;
             }
@@ -1146,13 +1145,13 @@ int main()
 #if !defined(WITHOUT_H12_24_SWITCH)            
             case M_SET_HOUR_12_24:
                 if (!H12_12) {
-                    filldisplay(1, 2, 0);
-                    filldisplay(2, 4, 0);
+                    fillDigit(1, 2, 0);
+                    fillDigit(2, 4, 0);
                 } else {
-                    filldisplay(1, 1, 0);
-                    filldisplay(2, 2, 0);
+                    fillDigit(1, 1, 0);
+                    fillDigit(2, 2, 0);
                 }
-                filldisplay(3, LED_h, 0);
+                fillDigit(3, LED_h, 0);
                 break;
 #endif                
 
@@ -1160,99 +1159,97 @@ int main()
             case M_TZ_SET_TIME:
             {
 #ifdef SIX_DIGITS
-                filldisplay(0, 'T'-'A' + LED_a, 0);
+                fillDigit(0, LED_t, 0);
                 int8_t hh = nmea_tz_hr;
                 if (hh < 0) {
                     hh = -hh;
                     if (hh < 10) {
-                        filldisplay(2, LED_DASH, 0);
+                        fillDigit(2, LED_DASH, 0);
                     } else {
-                        filldisplay(1, LED_DASH, 0);                    
+                        fillDigit(1, LED_DASH, 0);                    
                     }
                 } else {
-                    filldisplay(1, LED_BLANK, 0);
-                    filldisplay(2, LED_BLANK, 0);
+                    fillDigit(1, LED_BLANK, 0);
+                    fillDigit(2, LED_BLANK, 0);
                 }
-                dotdisplay(3, 1);
-                dotdisplay(4, 1);
+                fillDot(3, 1);
+                fillDot(4, 1);
 
                 if (!flash_01 || blinker_fast || S1_LONG) {
                     if (hh >= 10) {
-                        filldisplay(2, 1, 0);
+                        fillDigit(2, 1, 0);
                     }
-                    filldisplay(3, hh % 10, 0);
+                    fillDigit(3, hh % 10, 0);
                 }
                 if (!flash_23 || blinker_fast || S1_LONG) {
-                    filldisplay(4, nmea_tz_min / 10, 0);
-                    filldisplay(5, nmea_tz_min % 10, 0);
+                    fillDigit(4, nmea_tz_min / 10, 0);
+                    fillDigit(5, nmea_tz_min % 10, 0);
                 }
 #else
                 int8_t hh = nmea_tz_hr;
                 if (hh < 0) {
                     hh = -hh;
-                    dotdisplay(3, 1);
-                } else {
-                    dotdisplay(3, 0);
+                    fillDot(3, 1);
                 }
-                dotdisplay(1, 1);
-                dotdisplay(2, 1);
+                fillDot(1, 1);
+                fillDot(2, 1);
 
                 if (!flash_01 || blinker_fast || S1_LONG) {
                     if (hh >= 10) {
-                        filldisplay(0, 1, 0);
+                        fillDigit(0, 1, 0);
                     } else {
-                        filldisplay(0, LED_BLANK, 0);
+                        fillDigit(0, LED_BLANK, 0);
                     }
-                    filldisplay(1, hh % 10, 0);
+                    fillDigit(1, hh % 10, 0);
                 }
                 if (!flash_23 || blinker_fast || S1_LONG) {
-                    filldisplay(2, nmea_tz_min / 10, 0);
-                    filldisplay(3, nmea_tz_min % 10, 0);
+                    fillDigit(2, nmea_tz_min / 10, 0);
+                    fillDigit(3, nmea_tz_min % 10, 0);
                 }
 #endif
                 break;
             }
             case M_TZ_SET_DST:
-                filldisplay(0, 'D'-'A' + LED_a, 0);
-                filldisplay(1, 'S'-'A' + LED_a, 0);
-                filldisplay(2, 'T'-'A' + LED_a, 0);
+                fillDigit(0, LED_d, 0);
+                fillDigit(1, LED_s, 0);
+                fillDigit(2, LED_t, 0);
 #ifdef SIX_DIGITS              
                 if (nmea_tz_dst) {
-                    filldisplay(4, 'O'-'A' + LED_a, 0);
-                    filldisplay(5, 'N'-'A' + LED_a, 0);
+                    fillDigit(4, LED_o, 0);
+                    fillDigit(5, LED_n, 0);
                 } else {
-                    filldisplay(3, 'O'-'A' + LED_a, 0);
-                    filldisplay(4, LED_f, 0);
-                    filldisplay(5, LED_f, 0);
+                    fillDigit(3, LED_o, 0);
+                    fillDigit(4, LED_f, 0);
+                    fillDigit(5, LED_f, 0);
                 }
 #else
-                filldisplay(3, nmea_tz_dst, 0);
+                fillDigit(3, nmea_tz_dst, 0);
 #endif                
                 break;
             case M_TZ_AUTOUPDATE:
 #ifdef SIX_DIGITS                
-                filldisplay(0, 'U'-'A'+LED_a, 0);
-                filldisplay(1, 'P'-'A'+LED_a, 0);
-                filldisplay(2, 'D'-'A'+LED_a, 0);
+                fillDigit(0, LED_u, 0);
+                fillDigit(1, LED_p, 0);
+                fillDigit(2, LED_d, 0);
 
                 if (NMEA_AUTOSYNC_OFF == nmea_autosync) {
-                    filldisplay(3, 0, 0);
-                    filldisplay(4, LED_f, 0);
-                    filldisplay(5, LED_f, 0);
+                    fillDigit(3, 0, 0);
+                    fillDigit(4, LED_f, 0);
+                    fillDigit(5, LED_f, 0);
                 } else {
-                    filldisplay(3, nmea_autosync / 10, 0);
-                    filldisplay(4, nmea_autosync % 10, 0);
-                    filldisplay(5, LED_h, 0);
+                    fillDigit(3, nmea_autosync / 10, 0);
+                    fillDigit(4, nmea_autosync % 10, 0);
+                    fillDigit(5, LED_h, 0);
                 }
 #else
                 if (NMEA_AUTOSYNC_OFF == nmea_autosync) {
-                    filldisplay(0, 0, 0);
-                    filldisplay(1, LED_f, 0);
-                    filldisplay(2, LED_f, 0);
+                    fillDigit(0, 0, 0);
+                    fillDigit(1, LED_f, 0);
+                    fillDigit(2, LED_f, 0);
                 } else {
-                    filldisplay(0, nmea_autosync / 10, 0);
-                    filldisplay(1, nmea_autosync % 10, 0);
-                    filldisplay(2, LED_h, 0);
+                    fillDigit(0, nmea_autosync / 10, 0);
+                    fillDigit(1, nmea_autosync % 10, 0);
+                    fillDigit(2, LED_h, 0);
                 }
 #endif                
                 break;
@@ -1262,16 +1259,14 @@ int main()
             case M_SEC_DISP:
             #ifdef SHOW_MINUTES_WITH_SECONDS
                 uint8_t mm = rtc_mm_bcd;
-                filldisplay(0, mm >> 4, 0);
-                filldisplay(1, mm & 0x0F, blinker_slow);
+                fillDigit(0, mm >> 4, 0);
+                fillDigit(1, mm & 0x0F, blinker_slow);
             #else
-                dotdisplay(0, 0);
-                dotdisplay(1, blinker_slow);
+                fillDot(1, blinker_slow);
             #endif
             
-                filldisplay(2, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), blinker_slow);
-                filldisplay(3, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
-                dotdisplay(3, 0);
+                fillDigit(2, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), blinker_slow);
+                fillDigit(3, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
                 break;
 #endif
 
@@ -1279,34 +1274,32 @@ int main()
             case M_DATE_DISP:
                 if (!flash_01 || blinker_fast || S1_LONG) {
                     if (!CONF_SW_MMDD) {
-                        filldisplay( 0, rtc_table[DS_ADDR_MONTH] >> 4, 0);// tenmonth ( &MASK_TENS useless, as MSB bits are read as '0')
-                        filldisplay( 1, rtc_table[DS_ADDR_MONTH] & DS_MASK_MONTH_UNITS, 0);
+                        fillDigit(0, rtc_table[DS_ADDR_MONTH] >> 4, 0);// tenmonth ( &MASK_TENS useless, as MSB bits are read as '0')
+                        fillDigit(1, rtc_table[DS_ADDR_MONTH] & DS_MASK_MONTH_UNITS, 0);
                     }
                     else {
-                        filldisplay( 2, rtc_table[DS_ADDR_MONTH] >> 4, 0);// tenmonth ( &MASK_TENS useless, as MSB bits are read as '0')
-                        filldisplay( 3, rtc_table[DS_ADDR_MONTH] & DS_MASK_MONTH_UNITS, 0);
+                        fillDigit(2, rtc_table[DS_ADDR_MONTH] >> 4, 0);// tenmonth ( &MASK_TENS useless, as MSB bits are read as '0')
+                        fillDigit(3, rtc_table[DS_ADDR_MONTH] & DS_MASK_MONTH_UNITS, 0);
                     }
                 }
 
                 if (!flash_23 || blinker_fast || S1_LONG) {
                     if (!CONF_SW_MMDD) {
-                        filldisplay( 2, rtc_table[DS_ADDR_DAY] >> 4, 0); // tenday   ( &MASK_TENS useless)
-                        filldisplay( 3, rtc_table[DS_ADDR_DAY] & DS_MASK_DAY_UNITS, 0);     // day
+                        fillDigit(2, rtc_table[DS_ADDR_DAY] >> 4, 0); // tenday   ( &MASK_TENS useless)
+                        fillDigit(3, rtc_table[DS_ADDR_DAY] & DS_MASK_DAY_UNITS, 0);     // day
                     }
                     else {
-                        filldisplay( 0, rtc_table[DS_ADDR_DAY] >> 4, 0); // tenday   ( &MASK_TENS useless)
-                        filldisplay( 1, rtc_table[DS_ADDR_DAY] & DS_MASK_DAY_UNITS, 0);     // day
+                        fillDigit(0, rtc_table[DS_ADDR_DAY] >> 4, 0); // tenday   ( &MASK_TENS useless)
+                        fillDigit(1, rtc_table[DS_ADDR_DAY] & DS_MASK_DAY_UNITS, 0);     // day
                     }
                 }
-                dotdisplay(1, 1);
+                fillDot(1, 1);
 #ifdef SIX_DIGITS
-                dotdisplay(3, 1);
+                fillDot(3, 1);
                 if (!flash_45 || blinker_fast || S1_LONG) {
-                    filldisplay(4, (rtc_table[DS_ADDR_YEAR] >> 4) & (DS_MASK_YEAR_TENS >> 4), 0);
-                    filldisplay(5, rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR_UNITS, 0);
+                    fillDigit(4, (rtc_table[DS_ADDR_YEAR] >> 4) & (DS_MASK_YEAR_TENS >> 4), 0);
+                    fillDigit(5, rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR_UNITS, 0);
                 }
-#else
-                dotdisplay(3, 0);
 #endif
                 break;
 #endif
@@ -1319,37 +1312,33 @@ int main()
 
                 wd = rtc_table[DS_ADDR_WEEKDAY] - 1;
 
-                filldisplay(1, weekDay[wd][0] - 'A' + LED_a, 0);
-                filldisplay(2, weekDay[wd][1] - 'A' + LED_a, 0);
-                filldisplay(3, weekDay[wd][2] - 'A' + LED_a, 0);
-
-                dotdisplay(3, 0);
+                fillDigit(1, weekDay[wd][0] - 'A' + LED_a, 0);
+                fillDigit(2, weekDay[wd][1] - 'A' + LED_a, 0);
+                fillDigit(3, weekDay[wd][2] - 'A' + LED_a, 0);
 	      }
 	      break;
 #endif          
 
           case M_YEAR_DISP:
               // fix upper 2 digit as 20
-              filldisplay(0, 2, 0);
-              filldisplay(1, 0, 0);
+              fillDigit(0, 2, 0);
+              fillDigit(1, 0, 0);
 
-              filldisplay(2, (rtc_table[DS_ADDR_YEAR] >> 4) & (DS_MASK_YEAR_TENS >> 4), 0);
-              filldisplay(3, rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR_UNITS, 0);
+              fillDigit(2, (rtc_table[DS_ADDR_YEAR] >> 4) & (DS_MASK_YEAR_TENS >> 4), 0);
+              fillDigit(3, rtc_table[DS_ADDR_YEAR] & DS_MASK_YEAR_UNITS, 0);
               break;
 #endif
 
           case M_TEMP_DISP:
 #ifdef SIX_DIGITS
-              filldisplay(2, ds_int2bcd_tens(temp), 0);
-              filldisplay(3, ds_int2bcd_ones(temp), 0);
-              filldisplay(4, CONF_C_F ? LED_f : LED_c, 1);
-              // if (temp<0) filldisplay( 3, LED_DASH, 0);  -- temp defined as uint16, cannot be <0
-              dotdisplay(5, 0);
+              fillDigit(2, ds_int2bcd_tens(temp), 0);
+              fillDigit(3, ds_int2bcd_ones(temp), 0);
+              fillDigit(4, CONF_C_F ? LED_f : LED_c, 1);
+              // if (temp<0) fillDigit( 3, LED_DASH, 0);  -- temp defined as uint16, cannot be <0
 #else
-              filldisplay(0, ds_int2bcd_tens(temp), 0);
-              filldisplay(1, ds_int2bcd_ones(temp), 0);
-              filldisplay(2, CONF_C_F ? LED_f : LED_c, 1);
-              dotdisplay(3, 0);
+              fillDigit(0, ds_int2bcd_tens(temp), 0);
+              fillDigit(1, ds_int2bcd_ones(temp), 0);
+              fillDigit(2, CONF_C_F ? LED_f : LED_c, 1);
 #endif
               break;
 
@@ -1359,16 +1348,16 @@ int main()
                 // seconds, loop counter, blinkers, S1/S2, keypress events
                 uint8_t cc = count;
                 if (S1_PRESSED || S2_PRESSED) {
-                    filldisplay( 0, S1_PRESSED || S2_PRESSED ? LED_DASH : LED_BLANK, ev == EV_S1_SHORT || ev == EV_S2_SHORT);
-                    filldisplay( 1, S1_LONG || S2_LONG ? LED_DASH : LED_BLANK, ev == EV_S1_LONG || ev == EV_S2_LONG);
+                    fillDigit(0, S1_PRESSED || S2_PRESSED ? LED_DASH : LED_BLANK, ev == EV_S1_SHORT || ev == EV_S2_SHORT);
+                    fillDigit(1, S1_LONG || S2_LONG ? LED_DASH : LED_BLANK, ev == EV_S1_LONG || ev == EV_S2_LONG);
                 } else {
-                    filldisplay(0, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), 0);
-                    filldisplay(1, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, blinker_slow );
+                    fillDigit(0, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4), 0);
+                    fillDigit(1, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, blinker_slow );
                 }
-                filldisplay(2, hex[cc >> 4 & 0x0F], ev != EV_NONE);
-                filldisplay(3, hex[cc & 0x0F], blinker_slow & blinker_fast);
+                fillDigit(2, hex[cc >> 4 & 0x0F], ev != EV_NONE);
+                fillDigit(3, hex[cc & 0x0F], blinker_slow & blinker_fast);
 #ifdef SIX_DIGITS                
-                filldisplay(5, 1, 0);
+                fillDigit(5, 1, 0);
 #endif    
                 break;
             }
@@ -1377,12 +1366,12 @@ int main()
                 // photoresistor adc and lightval
                 uint8_t adc = getADCResult8(ADC_LIGHT);
                 uint8_t lv = lightval;
-                filldisplay( 0, hex[adc>>4], 0);
-                filldisplay( 1, hex[adc & 0x0F], 0);
-                filldisplay( 2, hex[lv>>4], 0);
-                filldisplay( 3, hex[lv & 0x0F], 0);
+                fillDigit(0, hex[adc >> 4], 0);
+                fillDigit(1, hex[adc & 0x0F], 0);
+                fillDigit(2, hex[lv >> 4], 0);
+                fillDigit(3, hex[lv & 0x0F], 0);
 #ifdef SIX_DIGITS                
-                filldisplay(5, 2, 0);
+                fillDigit(5, 2, 0);
 #endif    
                 break;
             }
@@ -1390,12 +1379,12 @@ int main()
             {
                 // thermistor adc
                 uint16_t rt = getADCResult(ADC_TEMP);
-                filldisplay( 0, hex[rt >> 12], 0);
-                filldisplay( 1, hex[rt >> 8 & 0x0F], 0);
-                filldisplay( 2, hex[rt >> 4 & 0x0F], 0);
-                filldisplay( 3, hex[rt & 0x0F], 0);
+                fillDigit(0, hex[rt >> 12], 0);
+                fillDigit(1, hex[rt >> 8 & 0x0F], 0);
+                fillDigit(2, hex[rt >> 4 & 0x0F], 0);
+                fillDigit(3, hex[rt & 0x0F], 0);
 #ifdef SIX_DIGITS                
-                filldisplay(5, 3, 0);
+                fillDigit(5, 3, 0);
 #endif    
                 break;
             }
@@ -1407,7 +1396,7 @@ int main()
 #ifndef WITHOUT_ALARM
         if (alarm_trigger && !alarm_reset) {
             if (blinker_slow && blinker_fast) {
-                clearTmpDisplay();
+                clearFrameBuffer();
                 BUZZER_ON;
             } else {
                 BUZZER_OFF;
@@ -1434,7 +1423,7 @@ int main()
 #endif
 
         __critical {
-            updateFrameBuffer();
+            updateDisplayBuffer();
         }
 
         count++;
@@ -1476,5 +1465,3 @@ void disable_nmea_receiving() {
     nmea_progress_seconds = 0;
 }
 #endif
-
-/* ------------------------------------------------------------------------- */
