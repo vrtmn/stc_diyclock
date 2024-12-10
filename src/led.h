@@ -1,27 +1,38 @@
-// LED functions for 4-digit seven segment led
+/*
+  LED functions & data structs
+*/
+
+#ifndef LED_H
+#define LED_H
 
 #include <stdint.h>
 
-// index into ledtable[]
-// To define all alphabets sequentially, move LED_a - LED_f after LED_dp
-#define LED_BLANK  10
-#define LED_DASH   11
-#define LED_h   12
-#define LED_dp  13
-#define LED_a   14 //0xa
-#define LED_b   15 //0xb
-#define LED_c   16 //0xc
-#define LED_d   17 //0xd
-#define LED_e   18 //0xe
-#define LED_f   19 //0xf
+// Indexes of symbols in the ledSymbols(Rev)
+
+#define LED_BLANK   10      // All segments are off
+#define LED_DASH    11      // '-'
+#define LED_dp      12      // '.'
+
+#define LED_a       13
+#define LED_b       (LED_a + ('B' - 'A'))
+#define LED_c       (LED_a + ('C' - 'A'))
+#define LED_d       (LED_a + ('D' - 'A'))
+#define LED_e       (LED_a + ('E' - 'A'))
+#define LED_f       (LED_a + ('F' - 'A'))
+#define LED_h       (LED_a + ('H' - 'A'))
+#define LED_n       (LED_a + ('N' - 'A'))
+#define LED_o       (LED_a + ('O' - 'A'))
+#define LED_p       (LED_a + ('P' - 'A'))
+#define LED_s       (LED_a + ('S' - 'A'))
+#define LED_t       (LED_a + ('T' - 'A'))
+#define LED_u       (LED_a + ('U' - 'A'))
 
 const uint8_t
-#ifndef WITHOUT_LEDTABLE_RELOC
+#if !defined(WITHOUT_LEDTABLE_RELOC)
 __at (0x1000)
 #endif
-ledtable[]
+ledSymbols[]
  = {
-    // digit to led digit lookup table
     // dp,g,f,e,d,c,b,a
     0b11000000, // was 0b00111111, // 0
     0b11111001, //     0b00000110, // 1
@@ -32,15 +43,10 @@ ledtable[]
     0b10000010, //     0b01111101, // 6
     0b11111000, //     0b00000111, // 7
     0b10000000, //     0b01111111, // 8
-#ifdef WITH_ALT_LED9
     0b10010000, //     0b01101111, // 9 with d segment
-#else
-    0b10011000, //     0b01100111, // 9 without d segment
-#endif
     0b11111111, //     0b00000000, // 10 - ' '
     0b10111111, //     0b01000000, // 11 - '-'
-    0b10001011, //     0b01110100, // 12 - 'h'
-    0b01111111, //     0b10000000, // 13 - '.'
+    0b01111111, //     0b10000000, // 12 - '.'
     0b10001000, //     0b01110111, // A
     0b10000011, //     0b01111100, // b
     0b11000110, //     0b00111001, // C
@@ -72,10 +78,10 @@ ledtable[]
 // Same but with abc <-> def
 
 const uint8_t
-#ifndef WITHOUT_LEDTABLE_RELOC
+#if !defined(WITHOUT_LEDTABLE_RELOC)
 __at (0x1100)
 #endif
-ledtableRev[]
+ledSymbolsRev[]
  ={
     0b11000000, // was 0b00111111, // 0
     0b11001111, //     0b00000110, // 1
@@ -86,15 +92,10 @@ ledtableRev[]
     0b10010000, //     0b01111101, // 6
     0b11000111, //     0b00000111, // 7
     0b10000000, //     0b01111111, // 8
-#ifdef WITH_ALT_LED9
     0b10000010, //     0b01101111, // 9 with d segment
-#else
-    0b10000011, //     0b01100111, // 9 without d segment
-#endif
     0b11111111, //     0b00000000, // 10 - ' '
     0b10111111, //     0b01000000, // 11 - '-'
-    0b10011001, //     0b01110100, // 12 - 'h'
-    0b01111111, //     0b10000000, // 13 - '.'
+    0b01111111, //     0b10000000, // 12 - '.'
     0b10000001, //     0b01110111, // A
     0b10011000, //     0b01111100, // b
     0b11110000, //     0b00111001, // C
@@ -125,47 +126,52 @@ ledtableRev[]
 
 #ifndef WITHOUT_WEEKDAY
 const char weekDay[][4] = {
-      "SUN",
-      "MON",
-      "TUE",
-      "WED",
-      "THU",
-      "FRI",
-      "SAT",
+    "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT",
 };
 #endif
 
+// Each bit determines the visibility of the corresponding dot
+uint8_t dotsBuffer;
+// Each item contains an index of a symbol in the ledSymbols(Rev) table
 uint8_t frameBuffer[NUMBER_OF_DIGITS];
-uint8_t dbuf[NUMBER_OF_DIGITS];
+// Each item contains a symbol to display
+uint8_t displayBuffer[NUMBER_OF_DIGITS];
 
-__bit   dot0;
-__bit   dot1;
-__bit   dot2;
-__bit   dot3;
-#ifdef SIX_DIGITS
-__bit   dot4;
-__bit   dot5;
-#endif
+inline uint8_t isDotVisible(uint8_t pos) { return dotsBuffer & (1 << pos); }
 
-#define filldisplay(pos,val,dp) { frameBuffer[pos]=(uint8_t)(val); if (dp) dot##pos=1;}
-#define dotdisplay(pos,dp) { if (dp) dot##pos=1;}
+inline void fillDot(uint8_t pos, uint8_t isVisible) {
+  if (isVisible)
+    dotsBuffer |= 1 << pos;
+}
 
-#ifdef SIX_DIGITS
-#define clearTmpDisplay() { dot0=0; dot1=0; dot2=0; dot3=0; dot4=0; dot5=0; frameBuffer[0]=frameBuffer[1]=frameBuffer[2]=frameBuffer[3]=frameBuffer[4]=frameBuffer[5]=LED_BLANK; }
+inline void fillDigit(uint8_t pos, uint8_t value, uint8_t isDotVisible) {
+  frameBuffer[pos] = value;
+  if (isDotVisible)
+    dotsBuffer |= 1 << pos;
+}
 
-#define updateFrameBuffer() { uint8_t tmp; \
-                        tmp=ledtable[frameBuffer[0]]; if (dot0) tmp&=0x7F; dbuf[0]=tmp; \
-                        tmp=ledtable[frameBuffer[1]]; if (dot1) tmp&=0x7F; dbuf[1]=tmp; \
-                        tmp=ledtableRev[frameBuffer[2]]; if (dot2) tmp&=0x7F; dbuf[2]=tmp; \
-                        tmp=ledtable[frameBuffer[3]]; if (dot3) tmp&=0x7F; dbuf[3]=tmp; \
-                        tmp=ledtableRev[frameBuffer[4]]; if (dot4) tmp&=0x7F; dbuf[4]=tmp; \
-                        tmp=ledtableRev[frameBuffer[5]]; if (dot5) tmp&=0x7F; dbuf[5]=tmp; }
-#else                        
-#define clearTmpDisplay() { dot0=0; dot1=0; dot2=0; dot3=0; frameBuffer[0]=frameBuffer[1]=frameBuffer[2]=frameBuffer[3]=LED_BLANK; }
+void clearFrameBuffer() {
+  dotsBuffer = 0;
+  for (uint8_t n = 0; n != NUMBER_OF_DIGITS; n++) {
+    frameBuffer[n] = LED_BLANK;
+  }
+}
 
-#define updateFrameBuffer() { uint8_t tmp; \
-                        tmp=ledtable[frameBuffer[0]]; if (dot0) tmp&=0x7F; dbuf[0]=tmp; \
-                        tmp=ledtable[frameBuffer[1]]; if (dot1) tmp&=0x7F; dbuf[1]=tmp; \
-                        tmp=ledtable[frameBuffer[3]]; if (dot3) tmp&=0x7F; dbuf[3]=tmp; \
-                        tmp=ledtableRev[frameBuffer[2]]; if (dot2) tmp&=0x7F; dbuf[2]=tmp; }
-#endif
+inline void updateDisplayBuffer() {
+  for (uint8_t n = 0; n != NUMBER_OF_DIGITS; n++) {
+    uint8_t tmp;
+    if (2 == n || n > 3) {
+      tmp = ledSymbolsRev[frameBuffer[n]];
+    } else {
+      tmp = ledSymbols[frameBuffer[n]];
+    }
+
+    if (isDotVisible(n)) {
+      tmp &= 0x7F;
+    }
+
+    displayBuffer[n] = tmp;
+  }
+}
+
+#endif // #define LED_H
