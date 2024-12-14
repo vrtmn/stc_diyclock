@@ -42,10 +42,10 @@ enum DisplayMode {
   M_CHIME,
 #endif
 
-#ifdef DEBUG
-  M_DEBUG,
-  M_DEBUG2,
-  M_DEBUG3,
+#ifdef WITH_DEBUG_SCREENS
+  M_DEBUG_SCREEN_1,
+  M_DEBUG_SCREEN_2,
+  M_DEBUG_SCREEN_3,
 #endif
 };
 

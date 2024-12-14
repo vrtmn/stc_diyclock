@@ -56,10 +56,10 @@ enum ButtonsMode {
   K_CHIME_SET_UNTIL,
 #endif
 
-#ifdef DEBUG
-  K_DEBUG,
-  K_DEBUG2,
-  K_DEBUG3,
+#ifdef WITH_DEBUG_SCREENS
+  K_DEBUG_SCREEN_1,
+  K_DEBUG_SCREEN_2,
+  K_DEBUG_SCREEN_3,
 #endif
 };
 

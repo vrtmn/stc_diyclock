@@ -9,11 +9,11 @@
 
 // Indexes of symbols in the ledSymbols(Rev)
 
-#define LED_BLANK   10      // All segments are off
-#define LED_DASH    11      // '-'
-#define LED_dp      12      // '.'
+#define LED_BLANK   (LED_a + ('Z' - 'A') + 1)       // All segments are off
+#define LED_DASH    (LED_BLANK + 1)                 // '-'
+#define LED_dp      (LED_DASH + 1)                  // '.'
 
-#define LED_a       13
+#define LED_a       10
 #define LED_b       (LED_a + ('B' - 'A'))
 #define LED_c       (LED_a + ('C' - 'A'))
 #define LED_d       (LED_a + ('D' - 'A'))
@@ -44,9 +44,6 @@ ledSymbols[]
     0b11111000, //     0b00000111, // 7
     0b10000000, //     0b01111111, // 8
     0b10010000, //     0b01101111, // 9 with d segment
-    0b11111111, //     0b00000000, // 10 - ' '
-    0b10111111, //     0b01000000, // 11 - '-'
-    0b01111111, //     0b10000000, // 12 - '.'
     0b10001000, //     0b01110111, // A
     0b10000011, //     0b01111100, // b
     0b11000110, //     0b00111001, // C
@@ -73,6 +70,9 @@ ledSymbols[]
     0b10001001, //     X
     0b10010001, //     Y
     0b10110110, //     Z  0x27
+    0b11111111, //     0b00000000, // ' ' - blank
+    0b10111111, //     0b01000000, // '-' - dash
+    0b01111111, //     0b10000000, // '.' - dot
 };
 
 // Same but with abc <-> def
@@ -93,9 +93,6 @@ ledSymbolsRev[]
     0b11000111, //     0b00000111, // 7
     0b10000000, //     0b01111111, // 8
     0b10000010, //     0b01101111, // 9 with d segment
-    0b11111111, //     0b00000000, // 10 - ' '
-    0b10111111, //     0b01000000, // 11 - '-'
-    0b01111111, //     0b10000000, // 12 - '.'
     0b10000001, //     0b01110111, // A
     0b10011000, //     0b01111100, // b
     0b11110000, //     0b00111001, // C
@@ -122,6 +119,9 @@ ledSymbolsRev[]
     0b10001001, //     X
     0b10001010, //     Y
     0b10110110, //     Z
+    0b11111111, //     0b00000000, // ' ' - blank
+    0b10111111, //     0b01000000, // '-' - dash
+    0b01111111, //     0b10000000, // '.' - dot
 };
 
 #ifndef WITHOUT_WEEKDAY
