@@ -16,11 +16,6 @@
 #include "event.h"
 #include "buttonmonitor.h"
 
-#ifdef DEBUG
-#define NUM_DEBUG 3
-uint8_t hex[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, LED_a, LED_b, LED_c, LED_d, LED_e, LED_f};
-#endif
-
 #if !defined(LIGHTVAL_LOWEST_VALUE)
 #define LIGHTVAL_LOWEST_VALUE   4           // Max. brightness
 #endif
@@ -654,7 +649,7 @@ inline void displayTemperature() {
 #endif
 }
 
-#ifdef DEBUG
+#ifdef WITH_DEBUG_SCREENS
 inline void displayDebug1() {
   // seconds, loop counter, blinkers, S1/S2, keypress events
   uint8_t cc = count;
@@ -667,8 +662,8 @@ inline void displayDebug1() {
     fillDigit(1, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS,
               blinker_slow);
   }
-  fillDigit(2, hex[cc >> 4 & 0x0F], 0);
-  fillDigit(3, hex[cc & 0x0F], blinker_slow & blinker_fast);
+  fillDigit(2, cc >> 4 & 0x0F, 0);
+  fillDigit(3, cc & 0x0F, blinker_slow & blinker_fast);
 #ifdef SIX_DIGITS
   fillDigit(5, 1, 0);
 #endif
@@ -678,10 +673,10 @@ inline void displayDebug2() {
   // photoresistor adc and lightval
   uint8_t adc = getADCResult8(ADC_LIGHT);
   uint8_t lv = lightval;
-  fillDigit(0, hex[adc >> 4], 0);
-  fillDigit(1, hex[adc & 0x0F], 0);
-  fillDigit(2, hex[lv >> 4], 0);
-  fillDigit(3, hex[lv & 0x0F], 0);
+  fillDigit(0, adc >> 4, 0);
+  fillDigit(1, adc & 0x0F, 0);
+  fillDigit(2, lv >> 4, 0);
+  fillDigit(3, lv & 0x0F, 0);
 #ifdef SIX_DIGITS
   fillDigit(5, 2, 0);
 #endif
@@ -690,10 +685,10 @@ inline void displayDebug2() {
 inline void displayDebug3() {
   // thermistor adc
   uint16_t rt = getADCResult(ADC_TEMP);
-  fillDigit(0, hex[rt >> 12], 0);
-  fillDigit(1, hex[rt >> 8 & 0x0F], 0);
-  fillDigit(2, hex[rt >> 4 & 0x0F], 0);
-  fillDigit(3, hex[rt & 0x0F], 0);
+  fillDigit(0, rt >> 12, 0);
+  fillDigit(1, rt >> 8 & 0x0F, 0);
+  fillDigit(2, rt >> 4 & 0x0F, 0);
+  fillDigit(3, rt & 0x0F, 0);
 #ifdef SIX_DIGITS
   fillDigit(5, 3, 0);
 #endif
@@ -762,14 +757,14 @@ inline void displayScreen() {
     displayTemperature();
     break;
 
-#ifdef DEBUG
-  case M_DEBUG:
+#ifdef WITH_DEBUG_SCREENS
+  case M_DEBUG_SCREEN_1:
     displayDebug1();
     break;
-  case M_DEBUG2:
+  case M_DEBUG_SCREEN_2:
     displayDebug2();
     break;
-  case M_DEBUG3:
+  case M_DEBUG_SCREEN_3:
     displayDebug3();
     break;
 #endif
@@ -1163,9 +1158,9 @@ inline void handleButtonsTemperature(enum Event ev) {
   if (ev == EV_S1_SHORT) {
     ds_temperature_offset_incr();
   }
-#ifdef DEBUG
+#ifdef WITH_DEBUG_SCREENS
   else if (ev == EV_S1S2_LONG) {
-    buttons_mode = K_DEBUG;
+    buttons_mode = K_DEBUG_SCREEN_1;
   }
 #endif
   else if (ev == EV_S1_LONG) {
@@ -1421,6 +1416,26 @@ inline void handleButtonsNormal(enum Event ev) {
 #endif
 }
 
+#ifdef WITH_DEBUG_SCREENS
+/*
+To enter DEBUG mode, go to the Temperature screen,
+then hold S1 and S2 simultaneously.
+S1 cycles through the DEBUG modes.
+To exit DEBUG mode, hold S1 and S2 again.
+*/
+
+#define NUMBER_OF_DEBUG_SCREENS 3
+
+inline void handleDebugScreens(enum Event ev) {
+  display_mode = DM_DEBUG_SCREEN_1 + buttons_mode - K_DEBUG_SCREEN_1;
+  if (ev == EV_S1_SHORT) {
+    buttons_mode = (buttons_mode - K_DEBUG_SCREEN_1 + 1) % NUMBER_OF_DEBUG_SCREENS + K_DEBUG_SCREEN_1;
+  } else if (ev == EV_S1S2_LONG) {
+    buttons_mode = K_TEMP_DISP;
+  }
+}
+#endif
+
 void handleButtonEvents(enum Event ev) {
   switch (buttons_mode) {
   case K_SET_HOUR:
@@ -1497,22 +1512,11 @@ void handleButtonEvents(enum Event ev) {
 #endif
 #endif
 
-#ifdef DEBUG
-  /*
-  To enter DEBUG mode, go to the Temperature screen,
-  then hold S1 and S2 simultaneously.
-  S1 cycles through the DEBUG modes.
-  To exit DEBUG mode, hold S1 and S2 again.
-  */
-  case K_DEBUG:
-  case K_DEBUG2:
-  case K_DEBUG3:
-    display_mode = M_DEBUG + buttons_mode - K_DEBUG;
-    if (ev == EV_S1_SHORT) {
-      buttons_mode = (buttons_mode - K_DEBUG + 1) % NUM_DEBUG + K_DEBUG;
-    } else if (ev == EV_S1S2_LONG) {
-      buttons_mode = K_TEMP_DISP;
-    }
+#ifdef WITH_DEBUG_SCREENS
+  case K_DEBUG_SCREEN_1:
+  case K_DEBUG_SCREEN_2:
+  case K_DEBUG_SCREEN_3:
+    handleDebugScreens(ev);
     break;
 #endif
 
