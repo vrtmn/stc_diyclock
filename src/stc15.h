@@ -8,15 +8,15 @@
 #endif
 
 /*  P4  */
-__sfr __at (0xC0) P4   ;
-__sbit __at (0xC0) P4_0 ;
-__sbit __at (0xC1) P4_1 ;
-__sbit __at (0xC2) P4_2 ;
-__sbit __at (0xC3) P4_3 ;
-__sbit __at (0xC4) P4_4 ;
-__sbit __at (0xC5) P4_5 ;
-__sbit __at (0xC6) P4_6 ;
-__sbit __at (0xC7) P4_7 ;
+__sfr __at(0xC0) P4;
+__sbit __at(0xC0) P4_0;
+__sbit __at(0xC1) P4_1;
+__sbit __at(0xC2) P4_2;
+__sbit __at(0xC3) P4_3;
+__sbit __at(0xC4) P4_4;
+__sbit __at(0xC5) P4_5;
+__sbit __at(0xC6) P4_6;
+__sbit __at(0xC7) P4_7;
 
 __sfr __at 0x94 P0M0;
 __sfr __at 0x93 P0M1;
@@ -175,5 +175,6 @@ __sfr __at 0xf7 PWMFDCR;
 #define PWM7T2L     (*(unsigned char volatile xdata *)0xff53)
 #define PWM7CR      (*(unsigned char volatile xdata *)0xff54)
 
-#endif
+#define WDT_CLEAR()    (WDT_CONTR |= 1 << 4)
 
+#endif
