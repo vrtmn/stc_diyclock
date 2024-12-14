@@ -12,7 +12,6 @@ enum Event {
   EV_S3_SHORT,
   EV_S3_LONG,
 #endif
-  EV_TIMEOUT,
 };
 
 #endif // #define EVENT_H

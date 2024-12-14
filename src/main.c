@@ -37,8 +37,6 @@ volatile int8_t count_5000;	        //0.5s=500ms
 volatile int8_t count_10000;        //1s=1000ms
 volatile int8_t count_blinker_slow;	//0.5s=500ms
 
-volatile uint16_t count_timeout; // max 6.5536 sec
-#define TIMEOUT_LONG 0xFFFF
 volatile __bit blinker_slow;
 volatile __bit blinker_fast;
 volatile __bit loop_gate;
@@ -252,17 +250,6 @@ void timer0_isr() __interrupt(1) __using(1)
         }
     }
     count_100++;	//increment every 0.1ms
-    
-#ifndef WITHOUT_ALARM
-    if (count_timeout != 0) {
-        count_timeout--;
-        if (count_timeout == 0) {
-            if (event == EV_NONE) {
-                event = EV_TIMEOUT;
-            }
-        }
-    }
-#endif
 }
 
 // Call timer0_isr() 10000/sec: 0.0001 sec
@@ -1283,21 +1270,16 @@ inline void handleButtonsAlarm(enum Event ev) {
   flash_45 = 0;
 #endif
   display_mode = M_ALARM;
-  if (ev == EV_TIMEOUT)
-    buttons_mode = K_NORMAL;
-  else if (ev == EV_S1_SHORT) {
+  if (ev == EV_S1_SHORT) {
 #if !defined(WITHOUT_CHIME)
-    count_timeout = TIMEOUT_LONG; // timeout for chime disp
     buttons_mode = K_CHIME;
 #else
     buttons_mode = K_NORMAL;
 #endif
   } else if (ev == EV_S2_SHORT) {
-    count_timeout = TIMEOUT_LONG; // reset timeout on toggle
     ds_alarm_on_toggle();
     cfg_changed = 1;
   } else if (ev == EV_S2_LONG) {
-    count_timeout = 0; // infinite adjusting
     buttons_mode = K_ALARM_SET_HOUR;
   }
 }
@@ -1318,7 +1300,6 @@ inline void handleButtonsAlarmSetMinute(enum Event ev) {
   flash_23 = 1;
   alarm_reset = 1;
   if (ev == EV_S2_SHORT) {
-    count_timeout = TIMEOUT_LONG; // timeout for alarm disp
     buttons_mode = K_ALARM;
   } else if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast)) {
     ds_alarm_minutes_incr();
@@ -1335,14 +1316,12 @@ inline void handleButtonsChime(enum Event ev) {
   flash_45 = 0;
 #endif
   display_mode = M_CHIME;
-  if (ev == EV_S1_SHORT || ev == EV_TIMEOUT) {
+  if (ev == EV_S1_SHORT) {
     buttons_mode = K_NORMAL;
   } else if (ev == EV_S2_SHORT) {
-    count_timeout = TIMEOUT_LONG; // reset timeout on toggle
     ds_chime_on_toggle();
     cfg_changed = 1;
   } else if (ev == EV_S2_LONG) {
-    count_timeout = 0; // infinite adjusting
     buttons_mode = K_CHIME_SET_SINCE;
   }
 }
@@ -1361,7 +1340,6 @@ inline void handleButtonsChimeSetUntil(enum Event ev) {
   flash_01 = 0;
   flash_23 = 1;
   if (ev == EV_S2_SHORT) {
-    count_timeout = TIMEOUT_LONG; // timeout for chime disp
     buttons_mode = K_CHIME;
   } else if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast)) {
     ds_chime_until_incr();
@@ -1378,9 +1356,6 @@ inline void handleButtonsNormal(enum Event ev) {
 #endif
 
   display_mode = M_NORMAL;
-  if (count_timeout) {
-    count_timeout = 0; // no timeout for normal (time display) mode
-  }
 
   if (ev == EV_S1_SHORT) {
 #ifdef SIX_DIGITS
