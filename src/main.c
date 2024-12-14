@@ -88,17 +88,6 @@ volatile int16_t chime_ticks;   // 10ms inc
 __bit cfg_changed = 1;
 #endif
 
-#if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
-#define SEC_PER_MONTH 2592000
-#if WITH_MONTHLY_CORR > 0
-#define CORR_VALUE 1 // +1 sec every ~RUNTIME_PER_SEC seconds
-#else
-#define CORR_VALUE -1 // -1 sec every ~RUNTIME_PER_SEC seconds
-#endif
-#define RUNTIME_PER_SEC (SEC_PER_MONTH / (WITH_MONTHLY_CORR * CORR_VALUE))
-volatile uint32_t corr_remaining = RUNTIME_PER_SEC;
-#endif
-
 volatile __bit S1_LONG;
 volatile __bit S1_PRESSED;
 volatile __bit S2_LONG;
@@ -198,11 +187,6 @@ void timer0_isr() __interrupt(1) __using(1)
             // 2/sec: 500 ms
             if (count_5000 == 5) {
                 count_5000 = 0;
-#if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
-                if (!blinker_slow && corr_remaining) {
-                    corr_remaining--;
-                }
-#endif
 #ifndef WITHOUT_ALARM
                 // 1/ 2sec: 20000 ms
                 if (count_20000 == 20) {
@@ -1255,9 +1239,6 @@ inline void handleButtonsSeconds(enum Event ev) {
     buttons_mode = K_NORMAL;
   } else if (ev == EV_S2_LONG) {
     ds_sec_zero();
-#if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
-    corr_remaining = RUNTIME_PER_SEC;
-#endif
   }
 }
 #endif
@@ -1647,14 +1628,6 @@ int main() {
 
     clearFrameBuffer();
     adjustDisplayMode();
-
-#if defined(WITH_MONTHLY_CORR) && WITH_MONTHLY_CORR != 0
-    if (!corr_remaining && rtc_table[DS_ADDR_SECONDS] == 0x51) {
-      ds_writebyte(DS_ADDR_SECONDS, rtc_table[DS_ADDR_SECONDS] + CORR_VALUE);
-      corr_remaining = RUNTIME_PER_SEC;
-    }
-#endif
-
     displayScreen();
 
 #if !defined(WITHOUT_ALARM)
