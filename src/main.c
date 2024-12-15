@@ -997,7 +997,7 @@ inline void handleButtonsSetMinute(enum Event ev) {
 
 #ifdef WITHOUT_H12_24_SWITCH
 #ifdef WITH_NMEA
-    BACKUP_NMEA_VALUES;
+    backupNmeaValues();
     buttons_mode = K_NMEA_SET_TZ_HOUR;
 #else
     buttons_mode = K_NORMAL;
@@ -1021,7 +1021,7 @@ inline void handleButtonsSetSecond6d(enum Event ev) {
   } else if (ev == EV_S2_SHORT) {
 #ifdef WITHOUT_H12_24_SWITCH
 #ifdef WITH_NMEA
-    BACKUP_NMEA_VALUES;
+    backupNmeaValues();
     buttons_mode = K_NMEA_SET_TZ_HOUR;
 #else
     buttons_mode = K_NORMAL;
@@ -1041,7 +1041,7 @@ inline void handleButtonsSet12h24(enum Event ev) {
     cfg_changed = 1;
   } else if (ev == EV_S2_SHORT) {
 #ifdef WITH_NMEA
-    BACKUP_NMEA_VALUES;
+    backupNmeaValues();
     buttons_mode = K_NMEA_SET_TZ_HOUR;
 #else
     buttons_mode = K_NORMAL;
