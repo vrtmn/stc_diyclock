@@ -19,7 +19,9 @@
 #define DS_ADDR_HOUR        2
 #define DS_ADDR_DAY         3
 #define DS_ADDR_MONTH       4
+#if !defined(WITHOUT_WEEKDAY)
 #define DS_ADDR_WEEKDAY     5
+#endif
 #define DS_ADDR_YEAR        6
 #define DS_ADDR_WP          7
 #define DS_ADDR_TCSDS       8
