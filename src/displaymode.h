@@ -6,46 +6,46 @@
 //
 
 enum DisplayMode {
-  M_NORMAL,
+  DM_NORMAL,
 
 #if !defined(WITHOUT_H12_24_SWITCH)
-  M_SET_HOUR_12_24,
+  DM_SET_HOUR_12_24,
 #endif
 
 #ifdef WITH_NMEA
-  M_NMEA_TIMEZONE,
-  M_NMEA_DST,
-  M_NMEA_AUTOUPDATE,
+  DM_NMEA_TIMEZONE,
+  DM_NMEA_DST,
+  DM_NMEA_AUTOUPDATE,
 #endif
 
 #if !defined(SIX_DIGITS)
-  M_SECONDS_DISP,
+  DM_SECONDS,
 #endif
 
-  M_TEMPERATURE_DISP,
+  DM_TEMPERATURE,
 
 #if !defined(WITHOUT_DATE)
-  M_DATE_DISP,
+  DM_DATE,
 #if !defined(WITHOUT_WEEKDAY)
-  M_WEEKDAY_DISP,
+  DM_WEEKDAY,
 #endif
 #if !defined(SIX_DIGITS)
-  M_YEAR_DISP,
+  DM_YEAR,
 #endif
 #endif
 
 #if !defined(WITHOUT_ALARM)
-  M_ALARM,
+  DM_ALARM,
 #endif
 
 #if !defined(WITHOUT_CHIME)
-  M_CHIME,
+  DM_CHIME,
 #endif
 
 #ifdef WITH_DEBUG_SCREENS
-  M_DEBUG_SCREEN_1,
-  M_DEBUG_SCREEN_2,
-  M_DEBUG_SCREEN_3,
+  DM_DEBUG_SCREEN_1,
+  DM_DEBUG_SCREEN_2,
+  DM_DEBUG_SCREEN_3,
 #endif
 };
 

@@ -41,7 +41,7 @@ volatile __bit blinker_slow;
 volatile __bit blinker_fast;
 volatile __bit loop_gate;
 
-enum DisplayMode display_mode = M_NORMAL;
+enum DisplayMode display_mode = DM_NORMAL;
 enum ButtonsMode buttons_mode = K_NORMAL;
 
 __bit flash_01;
@@ -316,7 +316,7 @@ inline void displayTime() {
   __bit pm = rtc_pm;
 
 #if !defined(WITHOUT_ALARM)
-  if (display_mode == M_ALARM) {
+  if (display_mode == DM_ALARM) {
     hh = alarm_hh_bcd;
     mm = alarm_mm_bcd;
     pm = alarm_pm;
@@ -324,7 +324,7 @@ inline void displayTime() {
 #endif
 
 #if !defined(WITHOUT_CHIME)
-  if (display_mode == M_CHIME) {
+  if (display_mode == DM_CHIME) {
     hh = chime_ss_bcd;
     mm = chime_uu_bcd;
     pm = chime_uu_pm;
@@ -342,7 +342,7 @@ inline void displayTime() {
 
   if (!flash_23 || blinker_fast || S1_LONG) {
 #if !defined(WITHOUT_CHIME)
-    if (display_mode == M_CHIME) {
+    if (display_mode == DM_CHIME) {
       // remove leading zero in chime stop hr
       uint8_t m0 = mm >> 4;
       if (H12_12 && m0 == 0) {
@@ -355,7 +355,7 @@ inline void displayTime() {
       fillDigit(2, mm >> 4, 0);
 
 #ifdef SIX_DIGITS
-    fillDigit(3, mm & 0x0F, display_mode == M_NORMAL ? blinker_slow : 0);
+    fillDigit(3, mm & 0x0F, display_mode == DM_NORMAL ? blinker_slow : 0);
 #else
     fillDigit(3, mm & 0x0F, 0);
 #endif
@@ -363,21 +363,21 @@ inline void displayTime() {
 
 #ifdef SIX_DIGITS
   if (!flash_45 || blinker_fast || S1_LONG) {
-    if (display_mode == M_NORMAL) {
+    if (display_mode == DM_NORMAL) {
       fillDigit(4,
                 (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4),
                 blinker_slow);
       fillDigit(5, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS, 0);
     }
 #if !defined(WITHOUT_ALARM)
-    else if (display_mode == M_ALARM) {
+    else if (display_mode == DM_ALARM) {
       // Show letter 'A' for the alarm mode
       fillDigit(5, LED_a, 0);
     }
 #endif
 
 #if !defined(WITHOUT_CHIME)
-    else if (display_mode == M_CHIME) {
+    else if (display_mode == DM_CHIME) {
       // Show letter 'C' for the chime mode
       fillDigit(5, LED_c, 0);
     }
@@ -385,9 +385,9 @@ inline void displayTime() {
   }
 #endif
 
-  if (blinker_slow || display_mode != M_NORMAL) {
+  if (blinker_slow || display_mode != DM_NORMAL) {
 #if !defined(WITHOUT_CHIME)
-    if (display_mode != M_CHIME) {
+    if (display_mode != DM_CHIME) {
 #endif
       fillDot(1, 1);
       fillDot(2, 1);
@@ -397,7 +397,7 @@ inline void displayTime() {
   }
 
 #ifndef WITHOUT_CHIME
-  if (display_mode == M_CHIME) {
+  if (display_mode == DM_CHIME) {
 #ifdef SIX_DIGITS
     fillDot(4, CONF_CHIME_ON);
 #else
@@ -666,74 +666,74 @@ inline void displayDebug3() {
 
 inline void displayScreen() {
   switch (display_mode) {
-  case M_NORMAL:
+  case DM_NORMAL:
 #if !defined(WITHOUT_ALARM)
-  case M_ALARM:
+  case DM_ALARM:
 #endif
 #if !defined(WITHOUT_CHIME)
-  case M_CHIME:
+  case DM_CHIME:
 #endif
     displayTime();
     break;
 
 #if !defined(WITHOUT_H12_24_SWITCH)
-  case M_SET_HOUR_12_24:
+  case DM_SET_HOUR_12_24:
     display12h24h();
     break;
 #endif
 
 #ifdef WITH_NMEA
-  case M_NMEA_TIMEZONE:
+  case DM_NMEA_TIMEZONE:
     displayNmeaTimeZone();
     break;
 
-  case M_NMEA_DST:
+  case DM_NMEA_DST:
     displayNmeaDST();
     break;
 
-  case M_NMEA_AUTOUPDATE:
+  case DM_NMEA_AUTOUPDATE:
     displayNmeaAutoupdate();
     break;
 #endif
 
 #if !defined(SIX_DIGITS)
-  case M_SECONDS_DISP:
+  case DM_SECONDS:
     displaySeconds();
     break;
 #endif
 
 #if !defined(WITHOUT_DATE)
-  case M_DATE_DISP:
+  case DM_DATE:
     displayDate();
     break;
 #endif
 
 #if !defined(WITHOUT_DATE)
 #if !defined(WITHOUT_WEEKDAY)
-  case M_WEEKDAY_DISP:
+  case DM_WEEKDAY:
     displayWeekday();
     break;
 #endif
 
 #if !defined(SIX_DIGITS)
-  case M_YEAR_DISP:
+  case DM_YEAR:
     displayYear();
     break;
 #endif
 #endif
 
-  case M_TEMPERATURE_DISP:
+  case DM_TEMPERATURE:
     displayTemperature();
     break;
 
 #ifdef WITH_DEBUG_SCREENS
-  case M_DEBUG_SCREEN_1:
+  case DM_DEBUG_SCREEN_1:
     displayDebug1();
     break;
-  case M_DEBUG_SCREEN_2:
+  case DM_DEBUG_SCREEN_2:
     displayDebug2();
     break;
-  case M_DEBUG_SCREEN_3:
+  case DM_DEBUG_SCREEN_3:
     displayDebug3();
     break;
 #endif
@@ -741,26 +741,26 @@ inline void displayScreen() {
 }
 
 inline void adjustDisplayMode() {
-  if (display_mode == M_NORMAL && buttons_mode == K_NORMAL) {
+  if (display_mode == DM_NORMAL && buttons_mode == K_NORMAL) {
     uint8_t ss = rtc_table[DS_ADDR_SECONDS];
     if (ss < 0x20) {
       return;
     }
 #ifdef AUTO_SHOW_TEMPERATURE
     else if (ss < 0x25) {
-      display_mode = M_TEMPERATURE_DISP;
+      display_mode = DM_TEMPERATURE;
     }
 #endif
 
 #if !defined(WITHOUT_DATE) && defined(AUTO_SHOW_DATE)
     else if (ss < 0x30) {
-      display_mode = M_DATE_DISP;
+      display_mode = DM_DATE;
     }
 #endif
 
 #if !defined(WITHOUT_DATE) && !defined(WITHOUT_WEEKDAY) && defined(AUTO_SHOW_WEEKDAY)
     else if (ss < 0x35) {
-      display_mode = M_WEEKDAY_DISP;
+      display_mode = DM_WEEKDAY;
     }
 #endif
   }
@@ -1033,7 +1033,7 @@ inline void handleButtonsSetSecond6d(enum Event ev) {
 
 #if !defined(WITHOUT_H12_24_SWITCH)
 inline void handleButtonsSet12h24(enum Event ev) {
-  display_mode = M_SET_HOUR_12_24;
+  display_mode = DM_SET_HOUR_12_24;
   if (ev == EV_S1_SHORT) {
     ds_hours_12_24_toggle();
     cfg_changed = 1;
@@ -1050,7 +1050,7 @@ inline void handleButtonsSet12h24(enum Event ev) {
 
 #ifdef WITH_NMEA
 inline void handleButtonsNmeaSetTimeZoneHour(enum Event ev) {
-  display_mode = M_NMEA_TIMEZONE;
+  display_mode = DM_NMEA_TIMEZONE;
   flash_01 = 1;
   flash_23 = 0;
   if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
@@ -1079,7 +1079,7 @@ inline void handleButtonsNmeaSetTimeZoneMinute(enum Event ev) {
 }
 
 inline void handleButtonsNmeaSetDST(enum Event ev) {
-  display_mode = M_NMEA_DST;
+  display_mode = DM_NMEA_DST;
   flash_01 = flash_23 = 1;
   if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
     nmea_tz_dst ^= 0x01;
@@ -1090,7 +1090,7 @@ inline void handleButtonsNmeaSetDST(enum Event ev) {
 }
 
 inline void handleButtonsNmeaSetAutoupdate(enum Event ev) {
-  display_mode = M_NMEA_AUTOUPDATE;
+  display_mode = DM_NMEA_AUTOUPDATE;
   if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast)) {
     switch (nmea_autosync) {
     case NMEA_AUTOSYNC_OFF:
@@ -1123,7 +1123,7 @@ inline void handleButtonsNmeaSetAutoupdate(enum Event ev) {
 #endif
 
 inline void handleButtonsTemperature(enum Event ev) {
-  display_mode = M_TEMPERATURE_DISP;
+  display_mode = DM_TEMPERATURE;
   if (ev == EV_S1_SHORT) {
     ds_temperature_offset_incr();
   }
@@ -1145,7 +1145,7 @@ inline void handleButtonsTemperature(enum Event ev) {
 
 #if !defined(WITHOUT_DATE)
 inline void handleButtonsDate(enum Event ev) {
-  display_mode = M_DATE_DISP;
+  display_mode = DM_DATE;
   if (ev == EV_S1_SHORT)
     ds_date_mmdd_toggle();
   else if (ev == EV_S2_LONG)
@@ -1205,7 +1205,7 @@ inline void handleButtonsSetYear(enum Event ev) {
 
 #if !defined(WITHOUT_WEEKDAY)
 inline void handleButtonsWeekday(enum Event ev) {
-  display_mode = M_WEEKDAY_DISP;
+  display_mode = DM_WEEKDAY;
   if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast)) {
     ds_weekday_incr();
   } else if (ev == EV_S2_SHORT) {
@@ -1220,7 +1220,7 @@ inline void handleButtonsWeekday(enum Event ev) {
 
 #ifndef SIX_DIGITS
 inline void handleButtonsYear(enum Event ev) {
-  display_mode = M_YEAR_DISP;
+  display_mode = DM_YEAR;
   if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast)) {
     ds_year_incr();
   } else if (ev == EV_S2_SHORT) {
@@ -1232,7 +1232,7 @@ inline void handleButtonsYear(enum Event ev) {
 
 #if !defined(SIX_DIGITS)
 inline void handleButtonsSeconds(enum Event ev) {
-  display_mode = M_SECONDS_DISP;
+  display_mode = DM_SECONDS;
   if (ev == EV_S1_SHORT) {
     buttons_mode = K_NORMAL;
   } else if (ev == EV_S2_LONG) {
@@ -1248,7 +1248,7 @@ inline void handleButtonsAlarm(enum Event ev) {
 #ifdef SIX_DIGITS
   flash_45 = 0;
 #endif
-  display_mode = M_ALARM;
+  display_mode = DM_ALARM;
   if (ev == EV_S1_SHORT) {
 #if !defined(WITHOUT_CHIME)
     buttons_mode = K_CHIME;
@@ -1294,7 +1294,7 @@ inline void handleButtonsChime(enum Event ev) {
 #ifdef SIX_DIGITS
   flash_45 = 0;
 #endif
-  display_mode = M_CHIME;
+  display_mode = DM_CHIME;
   if (ev == EV_S1_SHORT) {
     buttons_mode = K_NORMAL;
   } else if (ev == EV_S2_SHORT) {
@@ -1334,7 +1334,7 @@ inline void handleButtonsNormal(enum Event ev) {
   flash_45 = 0;
 #endif
 
-  display_mode = M_NORMAL;
+  display_mode = DM_NORMAL;
 
   if (ev == EV_S1_SHORT) {
 #ifdef SIX_DIGITS
