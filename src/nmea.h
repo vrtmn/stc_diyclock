@@ -9,6 +9,8 @@
 #define IAP_TZ_DST     0x0002
 #define IAP_TZ_AUTOSYNC 0x0003
 
+#define OSCILLATOR_FREQUENCY    11059200  // 11.0592MHz
+
 volatile uint32_t nmea_seconds_to_sync = 0;
 volatile uint32_t nmea_progress_seconds = 0;
 volatile int8_t nmea_tz_hr;
@@ -18,14 +20,6 @@ int8_t nmea_prev_tz_hr;
 uint8_t nmea_prev_tz_min;
 uint8_t nmea_prev_tz_dst;
 uint8_t nmea_prev_autosync;
-
-#define BACKUP_NMEA_VALUES                  \
-    {                                       \
-        nmea_prev_tz_hr = nmea_tz_hr;       \
-        nmea_prev_tz_min = nmea_tz_min;     \
-        nmea_prev_tz_dst = nmea_tz_dst;     \
-        nmea_prev_autosync = nmea_autosync; \
-    }
 
 #define NMEA_LINE_MAX_LEN 84
 #define NMEA_LINE_MIN_LEN 39
@@ -82,8 +76,8 @@ void uart1_init()
 #endif
     
     // UART1 use Timer2
-    T2L = (65536 - (FOSC / 4 / BAUDRATE)) & 0xFF;
-    T2H = (65536 - (FOSC / 4 / BAUDRATE)) >> 8;
+    T2L = (65536 - (OSCILLATOR_FREQUENCY / 4 / BAUDRATE)) & 0xFF;
+    T2H = (65536 - (OSCILLATOR_FREQUENCY / 4 / BAUDRATE)) >> 8;
     SM1 = 1;                    // serial mode 1: 8-bit async
     AUXR |= 0x14;               // T2R: run T2, T2x12: T2 clk src sysclk/1
     AUXR |= 0x01;               // S1ST2: T2 is baudrate generator
@@ -251,161 +245,172 @@ void uart1_isr() __interrupt(4) __using(2)
 // Parsing
 // 
 
-uint8_t char2int(char *p)
-{
-    return (*p - '0') * 10 + (*(p + 1) - '0');
+inline void backupNmeaValues() {
+  nmea_prev_tz_hr = nmea_tz_hr;
+  nmea_prev_tz_min = nmea_tz_min;
+  nmea_prev_tz_dst = nmea_tz_dst;
+  nmea_prev_autosync = nmea_autosync;
 }
 
-__code static uint8_t doft[] = { 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4 };
+// Converts two decimal characters into an integer
+uint8_t decChars2int(char *p) { return (*p - '0') * 10 + (*(p + 1) - '0'); }
+
+#if !defined(WITHOUT_WEEKDAY)
+__code static uint8_t doft[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+
 // method by Tomohiko Sakamoto, 1992, accurate for any Gregorian date
 // returns 0 = Sunday, 1 = Monday, etc.
-uint8_t dayofweek(uint16_t y, uint8_t m, uint8_t d)
-{   // 1 <= m <= 12,  y > 1752 (in the U.K.)
-    y -= m < 3;
-    return (y + y / 4 - y / 100 + y / 400 + doft[m - 1] + d) % 7;
+uint8_t dayofweek(uint16_t y, uint8_t m, uint8_t d) {
+  // 1 <= m <= 12,  y > 1752 (in the U.K.)
+  y -= m < 3;
+  return (y + y / 4 - y / 100 + y / 400 + doft[m - 1] + d) % 7;
 }
+#endif
 
-uint8_t isleap(uint16_t year)
-{
-    return (((year % 4 == 0) && (year % 100!= 0)) || (year%400 == 0));
+inline uint8_t isleap(uint16_t year) {
+  return ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0);
 }
 
 __code const uint8_t monlen[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 // month 1..12, year with century
-uint8_t days_per_month(uint16_t year, uint8_t month)
-{
-    if (month == 1)
-        return isleap(year) ? 29 : 28;
-    else
-        return monlen[month];
+uint8_t days_per_month(uint16_t year, uint8_t month) {
+  if (month == 1) {
+    return isleap(year) ? 29 : 28;
+  }
+  
+  return monlen[month];
 }
 
-void nmea_apply_tz(struct tm *t)
-{
-    int8_t hdiff = nmea_tz_hr;
-    if (nmea_tz_dst) {
+void nmea_apply_tz(struct tm *t) {
+  int8_t hdiff = nmea_tz_hr;
+  if (nmea_tz_dst) {
+    hdiff++;
+  }
+
+  if (nmea_tz_min) {
+    if (hdiff >= 0) {
+      // positive TZ
+      if ((t->tm_min = t->tm_min + nmea_tz_min) >= 60) {
+        t->tm_min -= 60;
         hdiff++;
-    }
-
-    if (nmea_tz_min) {
-        if (hdiff >= 0) {
-            // positive TZ
-            if ((t->tm_min = t->tm_min + nmea_tz_min) >= 60) {
-                t->tm_min -= 60;
-                hdiff ++;
-            }
-        } else {
-            // negative TZ
-            if (nmea_tz_min > t->tm_min) {
-                t->tm_min = t->tm_min + 60 - nmea_tz_min;
-                hdiff --;
-            } else
-                t->tm_min = t->tm_min - nmea_tz_min;
-        }
-    }
-
-    if (hdiff > 0) {
-        // positive TZ
-        if ((t->tm_hour = t->tm_hour + hdiff) >= 24) {
-            // next day
-            t->tm_hour -= 24;
-            if (++t->tm_mday > days_per_month(t->tm_year+1900, t->tm_mon)) {
-                // next month
-                t->tm_mday = 1;
-                if (++t->tm_mon >= 12) {
-                    // next year
-                    t->tm_mon = 0; // jan
-                    t->tm_year ++; 
-                }
-            }
-        }
-    } else if (hdiff < 0) {
-        // negative TZ
-        if (-hdiff > t->tm_hour) {
-            // prev day
-            t->tm_hour += 24 + hdiff;
-            if (!--t->tm_mday) {
-                // prev month
-                if (!t->tm_mon) { // jan
-                    // prev year
-                    t->tm_mon = 11; // dec
-                    t->tm_year --;
-                } else {
-                    t->tm_mon --;
-                }
-                t->tm_mday = days_per_month(t->tm_year + 1900, t->tm_mon);
-            }
-        } else {
-            // same day
-            t->tm_hour += hdiff;
-        }
-    }
-}
-
-void nmea2localtime()
-{
-    char *p;
-    struct tm t;
-    // $GPRMC,232231.00,A,,,,,,,170420,,,*27
-    p = nmeaGetComma(NMEA_COMMA_DATE) + 1;
-    t.tm_mday = char2int(p);          // day
-    t.tm_mon = char2int(p + 2) - 1;     // month, 0 = jan
-    t.tm_year = char2int(p + 4) + 100;  // year - 1900
-    p = nmeaGetComma(NMEA_COMMA_TIME) + 1;
-    t.tm_hour = char2int(p);
-    t.tm_min = char2int(p + 2);
-    t.tm_sec = char2int(p + 4);
-    nmea_apply_tz(&t);
-
-    ds_writebyte(DS_ADDR_DAY, ds_int2bcd(t.tm_mday));
-    ds_writebyte(DS_ADDR_MONTH, ds_int2bcd(t.tm_mon + 1));
-    ds_writebyte(DS_ADDR_YEAR, ds_int2bcd(t.tm_year - 100));
-    ds_writebyte(DS_ADDR_WEEKDAY, dayofweek(t.tm_year + 1900, t.tm_mon + 1, t.tm_mday) + 1);
-    
-    if (H12_12) {
-        uint8_t hmode = DS_MASK_1224_MODE;
-        
-        if (t.tm_hour >= 12) {
-            t.tm_hour -= 12;
-            hmode |= DS_MASK_PM;
-        }
-        
-        if (!t.tm_hour) {
-            t.tm_hour = 12;
-        }
-        
-        ds_writebyte(DS_ADDR_HOUR, ds_int2bcd(t.tm_hour) | hmode);
+      }
     } else {
-        ds_writebyte(DS_ADDR_HOUR, ds_int2bcd(t.tm_hour));
+      // negative TZ
+      if (nmea_tz_min > t->tm_min) {
+        t->tm_min = t->tm_min + 60 - nmea_tz_min;
+        hdiff--;
+      } else
+        t->tm_min = t->tm_min - nmea_tz_min;
     }
-    ds_writebyte(DS_ADDR_MINUTES, ds_int2bcd(t.tm_min));
-    ds_writebyte(DS_ADDR_SECONDS, 0b10000000); // set CH, stop clock
-    ds_writebyte(DS_ADDR_SECONDS, ds_int2bcd(t.tm_sec)); // clear CH, start clock
+  }
+
+  if (hdiff > 0) {
+    // positive TZ
+    if ((t->tm_hour = t->tm_hour + hdiff) >= 24) {
+      // next day
+      t->tm_hour -= 24;
+      if (++t->tm_mday > days_per_month(t->tm_year + 1900, t->tm_mon)) {
+        // next month
+        t->tm_mday = 1;
+        if (++t->tm_mon >= 12) {
+          // next year
+          t->tm_mon = 0; // jan
+          t->tm_year++;
+        }
+      }
+    }
+  } else if (hdiff < 0) {
+    // negative TZ
+    if (-hdiff > t->tm_hour) {
+      // prev day
+      t->tm_hour += 24 + hdiff;
+      if (!--t->tm_mday) {
+        // prev month
+        if (!t->tm_mon) { // jan
+          // prev year
+          t->tm_mon = 11; // dec
+          t->tm_year--;
+        } else {
+          t->tm_mon--;
+        }
+        t->tm_mday = days_per_month(t->tm_year + 1900, t->tm_mon);
+      }
+    } else {
+      // same day
+      t->tm_hour += hdiff;
+    }
+  }
 }
 
-void nmea_save_tz(void )
-{
-    Delay(10);
-    IapEraseSector(IAP_TZ_ADDRESS);
-    Delay(10);
-    IapProgramByte(IAP_TZ_HR, (uint8_t) nmea_tz_hr);
-    IapProgramByte(IAP_TZ_MIN, nmea_tz_min);
-    IapProgramByte(IAP_TZ_DST, nmea_tz_dst);
-    IapProgramByte(IAP_TZ_AUTOSYNC, nmea_autosync);
+void nmea2localtime() {
+  char *p;
+  struct tm t;
+  // $GPRMC,232231.00,A,,,,,,,170420,,,*27
+  p = nmeaGetComma(NMEA_COMMA_DATE) + 1;
+  t.tm_mday = decChars2int(p);           // day
+  t.tm_mon = decChars2int(p + 2) - 1;    // month, 0 = jan
+  t.tm_year = decChars2int(p + 4) + 100; // year - 1900
+  p = nmeaGetComma(NMEA_COMMA_TIME) + 1;
+  t.tm_hour = decChars2int(p);
+  t.tm_min = decChars2int(p + 2);
+  t.tm_sec = decChars2int(p + 4);
+  nmea_apply_tz(&t);
+
+  ds_writebyte(DS_ADDR_DAY, ds_int2bcd(t.tm_mday));
+  ds_writebyte(DS_ADDR_MONTH, ds_int2bcd(t.tm_mon + 1));
+  ds_writebyte(DS_ADDR_YEAR, ds_int2bcd(t.tm_year - 100));
+  #if !defined(WITHOUT_WEEKDAY)
+  ds_writebyte(DS_ADDR_WEEKDAY, dayofweek(t.tm_year + 1900, t.tm_mon + 1, t.tm_mday) + 1);
+  #endif
+
+  if (H12_12) {
+    uint8_t hmode = DS_MASK_1224_MODE;
+
+    if (t.tm_hour >= 12) {
+      t.tm_hour -= 12;
+      hmode |= DS_MASK_PM;
+    }
+
+    if (!t.tm_hour) {
+      t.tm_hour = 12;
+    }
+
+    ds_writebyte(DS_ADDR_HOUR, ds_int2bcd(t.tm_hour) | hmode);
+  } else {
+    ds_writebyte(DS_ADDR_HOUR, ds_int2bcd(t.tm_hour));
+  }
+  ds_writebyte(DS_ADDR_MINUTES, ds_int2bcd(t.tm_min));
+  ds_writebyte(DS_ADDR_SECONDS, 0b10000000);           // set CH, stop clock
+  ds_writebyte(DS_ADDR_SECONDS, ds_int2bcd(t.tm_sec)); // clear CH, start clock
 }
 
-void nmea_load_tz(void )
-{
-    nmea_tz_hr = (int8_t) IapReadByte(IAP_TZ_HR);
-    nmea_tz_min = IapReadByte(IAP_TZ_MIN);
-    nmea_tz_dst = IapReadByte(IAP_TZ_DST);
-    nmea_autosync = IapReadByte(IAP_TZ_AUTOSYNC);
-    // HR after reflash will be == 0xff == -1 by default
-    if (nmea_tz_hr < -12 || nmea_tz_hr > 12)
-        nmea_tz_hr = 0;
-    if (nmea_tz_min == 0xff ||  nmea_tz_min && nmea_tz_min != 30 && nmea_tz_min != 45)
-        nmea_tz_min = 0;
-    if (nmea_tz_dst == 0xff ||  nmea_tz_dst > 1)
-        nmea_tz_dst = 0;
+void nmea_save_tz(void) {
+  Delay(10);
+  IapEraseSector(IAP_TZ_ADDRESS);
+  Delay(10);
+  IapProgramByte(IAP_TZ_HR, (uint8_t)nmea_tz_hr);
+  IapProgramByte(IAP_TZ_MIN, nmea_tz_min);
+  IapProgramByte(IAP_TZ_DST, nmea_tz_dst);
+  IapProgramByte(IAP_TZ_AUTOSYNC, nmea_autosync);
+}
+
+void nmea_load_tz(void) {
+  nmea_tz_hr = (int8_t)IapReadByte(IAP_TZ_HR);
+  nmea_tz_min = IapReadByte(IAP_TZ_MIN);
+  nmea_tz_dst = IapReadByte(IAP_TZ_DST);
+  nmea_autosync = IapReadByte(IAP_TZ_AUTOSYNC);
+  
+  // HR after reflash will be == 0xff == -1 by default
+  if (nmea_tz_hr < -12 || nmea_tz_hr > 12) {
+    nmea_tz_hr = 0;
+  }
+
+  if (nmea_tz_min == 0xff || nmea_tz_min && nmea_tz_min != 30 && nmea_tz_min != 45) {
+    nmea_tz_min = 0;
+  }
+
+  if (nmea_tz_dst == 0xff || nmea_tz_dst > 1) {
+    nmea_tz_dst = 0;
+  }
 }
