@@ -8,7 +8,7 @@
 
 #include "models.h"
 
-#ifdef HW_REVISION_A
+#if defined(HW_REVISION_A)
  #define BUZZER     P1_5
  #define BUZZER_ON  (BUZZER = 0)
  #define BUZZER_OFF (BUZZER = 1)
@@ -17,7 +17,7 @@
  // offset where the digits start on LED_DIGITS_PORT
  #define LED_DIGITS_PORT_BASE   2
  #define NUM_SW     2
-#elif HW_REVISION_WITH_VOICE_CHIP
+#elif defined(HW_REVISION_WITH_VOICE_CHIP)
  // revision with stc15w408as (with voice chip)
  #define LED            P1_5
  #define BUZZER_ON
@@ -26,7 +26,7 @@
  #define ADC_TEMP       7
  #define LED_DIGITS_PORT_BASE   2
  #define NUM_SW         2
-#elif HW_REVISION_C
+#elif defined(HW_REVISION_C)
 /*
  Another model with STC15F204, but diff pinouts, described here:
  https://github.com/zerog2k/stc_diyclock/issues/20
