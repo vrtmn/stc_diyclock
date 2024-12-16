@@ -144,10 +144,8 @@ inline void fillDot(uint8_t pos, uint8_t isVisible) {
     dotsBuffer |= 1 << pos;
 }
 
-inline void fillDigit(uint8_t pos, uint8_t value, uint8_t isDotVisible) {
+inline void fillDigit(uint8_t pos, uint8_t value) {
   frameBuffer[pos] = value;
-  if (isDotVisible)
-    dotsBuffer |= 1 << pos;
 }
 
 void clearFrameBuffer() {
