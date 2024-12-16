@@ -14,7 +14,6 @@ This file defines configurations for clock models.
 #define FOUR_DIGITS
 #define AUTO_SHOW_TEMPERATURE 
 #define WITHOUT_DATE
-#define WITHOUT_CHIME
 #define WITHOUT_WEEKDAY
 #define WITHOUT_H12_24_SWITCH
 #define WITH_NMEA_DEVICE_SWITCH
@@ -26,7 +25,6 @@ This file defines configurations for clock models.
 
 #define HW_REVISION_A
 #define SIX_DIGITS
-#define WITHOUT_CHIME
 #define AUTO_SHOW_TEMPERATURE 
 #define WITHOUT_WEEKDAY
 #define MAP_SW2_TO_P1_4
@@ -35,6 +33,34 @@ This file defines configurations for clock models.
 #define LIGHTVAL_LOWEST_VALUE 1
 #define WITH_DEBUG_SCREENS
 
-#endif  // #elif GREEN_6
+#elif MINIMAL_4
+// 4 digits, HH:mm, all features are off
+
+#define HW_REVISION_A
+#define FOUR_DIGITS
+#define AUTO_SHOW_TEMPERATURE 
+#define WITHOUT_DATE
+#define WITHOUT_CHIME
+#define WITHOUT_ALARM
+#define WITHOUT_WEEKDAY
+#define WITHOUT_H12_24_SWITCH
+#define WITH_NMEA_DEVICE_SWITCH
+#define MOVE_UART_PINS_TO_P3_6
+
+#elif MINIMAL_6
+// 6 digits, HH:mm, all features are off
+
+#define HW_REVISION_A
+#define SIX_DIGITS
+#define AUTO_SHOW_TEMPERATURE 
+#define WITHOUT_DATE
+#define WITHOUT_CHIME
+#define WITHOUT_ALARM
+#define WITHOUT_WEEKDAY
+#define WITHOUT_H12_24_SWITCH
+#define WITH_NMEA_DEVICE_SWITCH
+#define MAP_SW2_TO_P1_4
+
+#endif  
 
 #endif // #ifndef MODELS_H
