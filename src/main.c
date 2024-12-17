@@ -321,10 +321,8 @@ uint8_t addBCD(uint8_t snooze) {
 inline void displayTime() {
   uint8_t hh = rtc_hh_bcd;
   uint8_t mm = rtc_mm_bcd;
-  __bit pm;
-#ifdef WITHOUT_H12_24_SWITCH
-  pm = 0;
-#else
+  __bit pm = 0;
+#if !defined(WITHOUT_H12_24_SWITCH)
   pm = rtc_pm;
 #endif
 
@@ -336,14 +334,7 @@ inline void displayTime() {
   }
 #endif
 
-#if !defined(WITHOUT_CHIME)
-  if (display_mode == DM_CHIME) {
-    hh = chime_ss_bcd;
-    mm = chime_uu_bcd;
-    pm = chime_uu_pm;
-  }
-#endif
-
+  // Digits 0, 1
   if (!flash_01 || blinker_fast || S1_LONG) {
     uint8_t h0 = hh >> 4;
 #if !defined(WITHOUT_H12_24_SWITCH)
@@ -355,72 +346,48 @@ inline void displayTime() {
     fillDigit(1, hh & 0x0F);
   }
 
+  // Digits 2, 3
   if (!flash_23 || blinker_fast || S1_LONG) {
-#if !defined(WITHOUT_CHIME)
-    if (display_mode == DM_CHIME) {
-      // remove leading zero in chime stop hr
-      uint8_t m0 = mm >> 4;
-#if !defined(WITHOUT_H12_24_SWITCH)
-      if (H12_12 && m0 == 0) {
-        m0 = LED_BLANK;
-      }
-#endif      
-      fillDigit(2, m0);
-    } else
-#endif
-      fillDigit(2, mm >> 4);
+    fillDigit(2, mm >> 4);
 
 #ifdef SIX_DIGITS
     fillDigit(3, mm & 0x0F);
-    fillDot(3, display_mode == DM_NORMAL ? blinker_slow : 0);
 #else
     fillDigit(3, mm & 0x0F);
 #endif
   }
 
 #ifdef SIX_DIGITS
+  fillDot(3, display_mode == DM_NORMAL ? blinker_slow : 0);
+#endif
+
+  // Dots 1, 2
+#if !defined(WITHOUT_ALARM)
+  if (display_mode == DM_ALARM) {
+    fillDot(1, 1);
+    fillDot(2, 1);
+  } else
+#endif
+      if (blinker_slow) {
+    fillDot(1, 1);
+    fillDot(2, 1);
+  }
+
+  // Digits 4, 5
+#ifdef SIX_DIGITS
   if (!flash_45 || blinker_fast || S1_LONG) {
     if (display_mode == DM_NORMAL) {
-      fillDigit(4, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4));
-      fillDot(4, blinker_slow);
+      fillDigit(4, (rtc_table[DS_ADDR_SECONDS] >> 4) & (DS_MASK_SECONDS_TENS >> 4));      
       fillDigit(5, rtc_table[DS_ADDR_SECONDS] & DS_MASK_SECONDS_UNITS);
     }
 #if !defined(WITHOUT_ALARM)
-    else if (display_mode == DM_ALARM) {
+    if (display_mode == DM_ALARM) {
       // Show letter 'A' for the alarm mode
       fillDigit(5, LED_a);
     }
 #endif
-
-#if !defined(WITHOUT_CHIME)
-    else if (display_mode == DM_CHIME) {
-      // Show letter 'C' for the chime mode
-      fillDigit(5, LED_c);
-    }
-#endif
   }
-#endif
-
-  if (blinker_slow || display_mode != DM_NORMAL) {
-#if !defined(WITHOUT_CHIME)
-    if (display_mode != DM_CHIME) {
-#endif
-      fillDot(1, 1);
-      fillDot(2, 1);
-#if !defined(WITHOUT_CHIME)
-    }
-#endif
-  }
-
-#ifndef WITHOUT_CHIME
-  if (display_mode == DM_CHIME) {
-#ifdef SIX_DIGITS
-    fillDot(4, CONF_CHIME_ON);
-#else
-    fillDot(2, CONF_CHIME_ON);
-#endif
-    fillDot(1, chime_ss_pm);
-  }
+  fillDot(4, blinker_slow);
 #endif
 
 #ifdef SIX_DIGITS
@@ -429,6 +396,44 @@ inline void displayTime() {
   fillDot(3, adjustDotVisibility(pm));
 #endif
 }
+
+#if !defined(WITHOUT_CHIME)
+inline void displayChime() {
+  // Digits 0, 1
+  if (!flash_01 || blinker_fast || S1_LONG) {
+    uint8_t h0 = chime_ss_bcd >> 4;
+#if !defined(WITHOUT_H12_24_SWITCH)
+    if (H12_12 && h0 == 0) {
+      h0 = LED_BLANK;
+    }
+#endif
+    fillDigit(0, h0);
+    fillDigit(1, chime_ss_bcd & 0x0F);
+  }
+  fillDot(1, chime_ss_pm);
+
+  // Digits 2, 3
+  if (!flash_23 || blinker_fast || S1_LONG) {
+    uint8_t m0 = chime_uu_bcd >> 4;
+#if !defined(WITHOUT_H12_24_SWITCH)
+    if (H12_12 && m0 == 0) {
+      m0 = LED_BLANK;
+    }
+#endif
+    fillDigit(2, m0);
+    fillDigit(3, chime_uu_bcd & 0x0F);
+  }
+
+#ifdef SIX_DIGITS
+  fillDot(3, chime_uu_pm);
+  fillDigit(5, LED_c);
+  fillDot(5, CONF_CHIME_ON);
+#else
+  fillDot(2, chime_uu_pm);
+  fillDot(3, CONF_CHIME_ON);
+#endif
+}
+#endif
 
 #if !defined(WITHOUT_H12_24_SWITCH)
 inline void display12h24h() {
@@ -685,11 +690,14 @@ inline void displayScreen() {
 #if !defined(WITHOUT_ALARM)
   case DM_ALARM:
 #endif
-#if !defined(WITHOUT_CHIME)
-  case DM_CHIME:
-#endif
     displayTime();
     break;
+
+#if !defined(WITHOUT_CHIME)
+  case DM_CHIME:
+    displayChime();
+    break;
+#endif
 
 #if !defined(WITHOUT_H12_24_SWITCH)
   case DM_SET_HOUR_12_24:
