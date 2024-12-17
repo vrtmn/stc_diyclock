@@ -6,11 +6,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "stc15.h"
+#include "models.h"
 #include "adc.h"
 #include "ds1302.h"
 #include "led.h"
 #include "hwconfig.h"
-#include "models.h"
 #include "buttonsmode.h"
 #include "displaymode.h"
 #include "event.h"
@@ -52,7 +52,10 @@ __bit flash_45;
 
 uint8_t rtc_hh_bcd;
 uint8_t rtc_mm_bcd;
+
+#if !defined(WITHOUT_H12_24_SWITCH)
 __bit rtc_pm;
+#endif
 
 #if !defined(WITHOUT_ALARM) || !defined(WITHOUT_CHIME)
 #ifndef WITHOUT_ALARM
@@ -279,6 +282,9 @@ int8_t getTemperature(uint16_t raw) {
 
 inline uint8_t adjustDotVisibility(uint8_t pm) {
 #if !defined(WITHOUT_ALARM)
+#ifdef WITHOUT_H12_24_SWITCH
+  return CONF_ALARM_ON && blinker_slowest && blinker_fast;
+#else
   // dot 3: If alarm is on, blink for 500 ms every 2000 ms
   //        If 12h: on if pm when not blinking
   if (!H12_12) { // 24h mode
@@ -288,6 +294,8 @@ inline uint8_t adjustDotVisibility(uint8_t pm) {
     pm = blinker_fast;
   }
 #endif
+#endif
+
   return pm;
 }
 
@@ -313,7 +321,12 @@ uint8_t addBCD(uint8_t snooze) {
 inline void displayTime() {
   uint8_t hh = rtc_hh_bcd;
   uint8_t mm = rtc_mm_bcd;
-  __bit pm = rtc_pm;
+  __bit pm;
+#ifdef WITHOUT_H12_24_SWITCH
+  pm = 0;
+#else
+  pm = rtc_pm;
+#endif
 
 #if !defined(WITHOUT_ALARM)
   if (display_mode == DM_ALARM) {
@@ -333,9 +346,11 @@ inline void displayTime() {
 
   if (!flash_01 || blinker_fast || S1_LONG) {
     uint8_t h0 = hh >> 4;
+#if !defined(WITHOUT_H12_24_SWITCH)
     if (H12_12 && h0 == 0) {
       h0 = LED_BLANK;
     }
+#endif
     fillDigit(0, h0, 0);
     fillDigit(1, hh & 0x0F, 0);
   }
@@ -345,9 +360,11 @@ inline void displayTime() {
     if (display_mode == DM_CHIME) {
       // remove leading zero in chime stop hr
       uint8_t m0 = mm >> 4;
+#if !defined(WITHOUT_H12_24_SWITCH)
       if (H12_12 && m0 == 0) {
         m0 = LED_BLANK;
       }
+#endif      
       fillDigit(2, m0, 0);
     } else
 #endif
@@ -813,6 +830,7 @@ inline void prepareAlarmAndChimeBCD() {
     chime_uu_bcd = cfg_table[CFG_CHIME_UNTIL_BYTE] & CFG_CHIME_UNTIL_MASK;
     chime_ss_pm = chime_uu_pm = 0;
     
+#if !defined(WITHOUT_H12_24_SWITCH)    
     if (H12_12) {
       if (chime_ss_bcd >= 12) {
         chime_ss_pm = 1;
@@ -827,6 +845,7 @@ inline void prepareAlarmAndChimeBCD() {
       if (chime_uu_bcd == 0)
         chime_uu_bcd = 12;
     }
+#endif    
 
     // convert to BCD
     chime_ss_bcd = ds_int2bcd(chime_ss_bcd);
@@ -836,6 +855,7 @@ inline void prepareAlarmAndChimeBCD() {
 #ifndef WITHOUT_ALARM
     alarm_pm = 0;
     alarm_hh_bcd = cfg_table[CFG_ALARM_HOURS_BYTE] >> CFG_ALARM_HOURS_SHIFT;
+#if !defined(WITHOUT_H12_24_SWITCH)    
     if (H12_12) {
       if (alarm_hh_bcd >= 12) {
         alarm_pm = 1;
@@ -845,6 +865,7 @@ inline void prepareAlarmAndChimeBCD() {
         alarm_hh_bcd = 12;
       }
     }
+#endif    
 
     alarm_mm_bcd = cfg_table[CFG_ALARM_MINUTES_BYTE] & CFG_ALARM_MINUTES_MASK;
     // convert to BCD
@@ -867,6 +888,7 @@ inline void prepareChimeTrigger() {
     uint8_t ss = chime_ss_bcd;
     uint8_t uu = chime_uu_bcd;
     // convert all to 24h for comparision
+#if !defined(WITHOUT_H12_24_SWITCH)
     if (H12_12) {
       if (hh == 0x12 && !rtc_pm)
         hh == 0x00;
@@ -881,6 +903,7 @@ inline void prepareChimeTrigger() {
       else if (uu != 0x12 && chime_uu_pm)
         uu += 0x12;
     }
+#endif
     if ((ss <= uu && hh >= ss && hh <= uu) ||
         (ss > uu && (hh >= ss || hh <= uu))) {
       chime_state = CHIME_RUNNING;
@@ -913,8 +936,11 @@ enum Event prepareAlarmTrigger(enum Event ev) {
   // check for alarm trigger
   // when snooze_time>0, just compare min portion
   if ((snooze_time == 0 &&
-       (alarm_hh_bcd == rtc_hh_bcd && alarm_mm_bcd == rtc_mm_bcd &&
-        alarm_pm == rtc_pm)) ||
+       (alarm_hh_bcd == rtc_hh_bcd && alarm_mm_bcd == rtc_mm_bcd
+#if !defined(WITHOUT_H12_24_SWITCH)
+        && alarm_pm == rtc_pm
+#endif
+        )) ||
       (snooze_time > 0 && (alarm_mm_snooze == rtc_mm_bcd))) {
     if (CONF_ALARM_ON && !alarm_trigger && !alarm_reset) {
       alarm_trigger = 1;
@@ -1603,13 +1629,18 @@ int main() {
 
     // parse RTC
     rtc_hh_bcd = rtc_table[DS_ADDR_HOUR];
+
+#ifdef WITHOUT_H12_24_SWITCH
+    rtc_hh_bcd &= DS_MASK_HOUR24;
+#else
     if (H12_12) {
       rtc_hh_bcd &= DS_MASK_HOUR12;
     } else {
       rtc_hh_bcd &= DS_MASK_HOUR24;
     }
-
     rtc_pm = H12_12 && H12_PM;
+#endif
+
     rtc_mm_bcd = rtc_table[DS_ADDR_MINUTES] & DS_MASK_MINUTES;
 
 #if !defined(WITHOUT_ALARM) || !defined(WITHOUT_CHIME)

@@ -208,6 +208,7 @@ void ds_hours_12_24_toggle() {
 // increment hours
 void ds_hours_incr() {
     uint8_t hours, b = 0;
+#if !defined(WITHOUT_H12_24_SWITCH)
     if (H12_12) {
         hours = ds_split2int(rtc_table[DS_ADDR_HOUR] & DS_MASK_HOUR12);	//12h format
         INCR(hours, 1, 12);
@@ -218,7 +219,9 @@ void ds_hours_incr() {
         if (H12_PM) {
             b |=  DS_MASK_PM;
         }
-    } else {
+    } else 
+#endif    
+    {
         hours = ds_split2int(rtc_table[DS_ADDR_HOUR] & DS_MASK_HOUR24);	//24h format
         INCR(hours, 0, 23);
         b = ds_int2bcd(hours);		// bit 7 = 0
