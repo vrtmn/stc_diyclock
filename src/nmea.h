@@ -364,6 +364,7 @@ void nmea2localtime() {
   ds_writebyte(DS_ADDR_WEEKDAY, dayofweek(t.tm_year + 1900, t.tm_mon + 1, t.tm_mday) + 1);
   #endif
 
+#if !defined(WITHOUT_H12_24_SWITCH)
   if (H12_12) {
     uint8_t hmode = DS_MASK_1224_MODE;
 
@@ -377,7 +378,9 @@ void nmea2localtime() {
     }
 
     ds_writebyte(DS_ADDR_HOUR, ds_int2bcd(t.tm_hour) | hmode);
-  } else {
+  } else 
+#endif  
+  {
     ds_writebyte(DS_ADDR_HOUR, ds_int2bcd(t.tm_hour));
   }
   ds_writebyte(DS_ADDR_MINUTES, ds_int2bcd(t.tm_min));

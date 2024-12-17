@@ -34,7 +34,7 @@ all: main
 
 build/%.rel: src/%.c src/%.h
 	mkdir -p $(dir $@)
-	$(SDCC) $(SDCCOPTS) -o $@ -c $<
+	$(SDCC) $(SDCCOPTS) $(CFLAGS) -o $@ -c $<
 
 main: $(OBJ)
 	$(SDCC) -o build/ src/$@.c $(SDCCOPTS) $(CFLAGS) $^
