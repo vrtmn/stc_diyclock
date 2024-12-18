@@ -31,11 +31,11 @@ uint8_t lightval;  // light sensor value
 uint8_t previous_second = 0;
 
 volatile uint8_t display_counter;
-volatile int8_t count_100;	        //0.01s=10ms
-volatile int8_t count_1000;	        //0.1s=100ms
-volatile int8_t count_5000;	        //0.5s=500ms
-volatile int8_t count_10000;        //1s=1000ms
-volatile int8_t count_blinker_slow;	//0.5s=500ms
+volatile int8_t counter_10ms;
+volatile int8_t counter_100ms;
+volatile int8_t counter_500ms;
+volatile int8_t counter_1sec;
+volatile int8_t counter_blinker_slow;
 
 volatile __bit blinker_slow;
 volatile __bit blinker_fast;
@@ -68,7 +68,7 @@ __bit alarm_reset;
 uint8_t snooze_time;	            // snooze(min)
 uint8_t alarm_mm_snooze;	        // Next alarm time (min)
 
-volatile int16_t count_20000;	    // 2s
+volatile int16_t counter_2sec;
 volatile __bit blinker_slowest;
 #endif
 
@@ -115,133 +115,156 @@ void disable_nmea_receiving();
 volatile enum Event event;
 
 /*
+Align the blinker slow counter with the actual time (seconds).
+This is essential for the HH:MM:SS model - the blinking dots must be
+in sync with the changing seconds to look nice.
+*/
+inline void timerBlinkerSlow() {
+  if (0 == previous_second) { // initial value
+    previous_second = rtc_table[DS_ADDR_SECONDS];
+  } else if (rtc_table[DS_ADDR_SECONDS] != previous_second) {
+    counter_blinker_slow = 1;
+    blinker_slow = 1;
+    previous_second = rtc_table[DS_ADDR_SECONDS];
+  }
+
+  if (counter_blinker_slow == 5) { // 500 ms
+    counter_blinker_slow = 0;
+    blinker_slow = !blinker_slow; // blink every 500ms
+  }
+}
+
+inline void timer500ms() {
+#ifndef WITHOUT_ALARM
+  // 1/ 2sec: 20000 ms
+  if (counter_2sec == 20) {
+    counter_2sec = 0;
+  }
+  // 500 ms on=true=1, 1500 ms off=false=0
+  blinker_slowest = counter_2sec < 5;
+#endif
+}
+
+inline void timer1sec() {
+#if defined(WITH_NMEA)
+  if (nmea_seconds_to_sync > 0) {
+    nmea_seconds_to_sync--;
+  }
+
+  if (IS_NMEA_AUTOSYNC_ON && !blinker_slow && 0 == nmea_seconds_to_sync) {
+    enable_nmea_receiving();
+  }
+#endif
+}
+
+inline void timer100ms() {
+  blinker_fast = !blinker_fast; // blink every 100ms
+  loop_gate = 1;                // every 100ms
+
+  counter_500ms++; // increment every 100ms
+  counter_1sec++;
+  counter_blinker_slow++;
+
+#ifndef WITHOUT_ALARM
+  counter_2sec++; // increment every 100ms
+#endif
+
+  timerBlinkerSlow();
+
+  if (counter_500ms == 5) {
+    counter_500ms = 0;
+    timer500ms();
+  }
+
+  if (10 == counter_1sec) {
+    counter_1sec = 0;
+    timer1sec();
+  }
+}
+
+inline void displayDigits() {
+  uint8_t digit = display_counter % (uint8_t)NUMBER_OF_DIGITS;
+
+  // turn off all digits, set high
+  LED_DIGITS_OFF();
+
+  // auto dimming, skip lighting for some cycles
+  if (display_counter % lightval < NUMBER_OF_DIGITS) {
+    // fill digits
+    LED_SEGMENT_PORT = displayBuffer[digit];
+    // issue #32, fix for newer sdcc versions which are using non-atomic port
+    // access
+    LED_DIGITS_PORT &= ~((1 << LED_DIGITS_PORT_BASE) << digit);
+  }
+
+  display_counter++;
+}
+
+inline void checkButtons() {
+  enum Event ev = EV_NONE;
+
+  // Check SW status and chattering control
+  MONITOR_S(1);
+  MONITOR_S(2);
+#ifdef HW_REVISION_WITH_VOICE_CHIP
+  MONITOR_S(3);
+#endif
+
+  if (ev == EV_S1_LONG && S2_PRESSED) {
+    S2_LONG = 1;
+    switchcount[1] = 0;
+    ev = EV_S1S2_LONG;
+  } else if (ev == EV_S2_LONG && S1_PRESSED) {
+    S1_LONG = 1;
+    switchcount[0] = 0;
+    ev = EV_S1S2_LONG;
+  }
+  if (event == EV_NONE) {
+    event = ev;
+  }
+}
+
+inline void timer10ms() {
+  counter_100ms++;
+
+  // 10/sec: 100 ms
+  if (counter_100ms == 10) {
+    counter_100ms = 0;
+    timer100ms();
+  }
+
+#ifndef WITHOUT_CHIME
+  if (chime_state != CHIME_IDLE) {
+    chime_ticks++; // increment every 10ms
+  }
+#endif
+
+  checkButtons();
+}
+
+/*
   interrupt: every 0.1ms=100us come here
 
   Check button status
   Dynamically LED turn on
  */
-void timer0_isr() __interrupt(1) __using(1)
-{
-    uint8_t tmp;
-    enum Event ev = EV_NONE;
-    // display refresh ISR
-    // cycle thru digits one at a time
-    uint8_t digit = display_counter % (uint8_t) NUMBER_OF_DIGITS;
+void timer0_isr() __interrupt(1) __using(1) {
+  displayDigits();
 
-    // turn off all digits, set high
-    LED_DIGITS_OFF();
+  // 100/sec: 10 ms
+  if (counter_10ms == 100) {
+    counter_10ms = 0;
+    timer10ms();
+  }
 
-    // auto dimming, skip lighting for some cycles
-    if (display_counter % lightval < NUMBER_OF_DIGITS) {
-        // fill digits
-        LED_SEGMENT_PORT = displayBuffer[digit];
-        // turn on selected digit, set low
-        //LED_DIGIT_ON(digit);
-        // issue #32, fix for newer sdcc versions which are using non-atomic port access
-        tmp = ~((1<<LED_DIGITS_PORT_BASE) << digit);
-        LED_DIGITS_PORT &= tmp;
-    }
-    display_counter++;
-
-    // 100/sec: 10 ms
-    if (count_100 == 100) {
-        count_100 = 0;
-
-	    count_1000++;	//increment every 10ms
-
-#ifndef WITHOUT_CHIME
-        if (chime_state != CHIME_IDLE) {
-            chime_ticks++;     //increment every 10ms
-        }
-#endif
-
-        // 10/sec: 100 ms
-        if (count_1000 == 10) {
-            count_1000 = 0;
-            blinker_fast = !blinker_fast;	//blink every 100ms
-            loop_gate = 1;	//every 100ms
-
-            count_5000++; // increment every 100ms
-            count_blinker_slow++;
-            count_10000++;
-#ifndef WITHOUT_ALARM
-            count_20000++; // increment every 100ms
-#endif
-            /*
-            Align the blinker slow counter with the actual time (seconds).
-            This is essential for the HH:MM:SS model - the blinking dots must be 
-            in sync with the changing seconds to look nice.
-            */
-            if (0 == previous_second) { // initial value
-                previous_second = rtc_table[DS_ADDR_SECONDS];
-            } else if (rtc_table[DS_ADDR_SECONDS] != previous_second) {                
-                count_blinker_slow = 1;
-                blinker_slow = 1;
-                previous_second = rtc_table[DS_ADDR_SECONDS];
-            }
-            
-            if (count_blinker_slow == 5) {  // 500 ms
-                count_blinker_slow = 0;
-                blinker_slow = !blinker_slow; // blink every 500ms
-            }
-
-            // 2/sec: 500 ms
-            if (count_5000 == 5) {
-                count_5000 = 0;
-#ifndef WITHOUT_ALARM
-                // 1/ 2sec: 20000 ms
-                if (count_20000 == 20) {
-                    count_20000 = 0;
-                }
-                // 500 ms on=true=1, 1500 ms off=false=0
-                blinker_slowest = count_20000 < 5;
-#endif
-            }
-
-            // 1 sec
-            if (10 == count_10000) {
-                count_10000 = 0;
-
-#if defined(WITH_NMEA)
-                if (nmea_seconds_to_sync > 0) {
-                    nmea_seconds_to_sync--;
-                }
-                
-                if (IS_NMEA_AUTOSYNC_ON && !blinker_slow && 0 == nmea_seconds_to_sync) {
-                    enable_nmea_receiving();
-                }
-#endif
-            }
-        }
-
-        // Check SW status and chattering control
-        MONITOR_S(1);
-        MONITOR_S(2);
-#ifdef HW_REVISION_WITH_VOICE_CHIP
-        MONITOR_S(3);
-#endif
-
-        if (ev == EV_S1_LONG && S2_PRESSED) {
-            S2_LONG = 1;
-            switchcount[1] = 0;
-            ev = EV_S1S2_LONG;
-        } else if (ev == EV_S2_LONG && S1_PRESSED) {
-            S1_LONG = 1;
-            switchcount[0] = 0;
-            ev = EV_S1S2_LONG;
-        }
-        if (event == EV_NONE) {
-            event = ev;
-        }
-    }
-    count_100++;	//increment every 0.1ms
+  counter_10ms++; // increment every 0.1ms
 }
 
 // Call timer0_isr() 10000/sec: 0.0001 sec
 // Initialize the timer count so that it overflows after 0.0001 sec
 // THTL = 0x10000 - FOSC / 12 / 10000 = 0x10000 - 92.16 = 65444 = 0xFFA4
 // When 11.0592MHz clock case, set every 100us interruption
-void Timer0Init(void) // 100us @ 11.0592MHz
+void timer0Init(void) // 100us @ 11.0592MHz
 {
   // refer to section 7 of datasheet: STC15F2K60S2-en2.pdf
   // TMOD = 0;    // default: 16-bit auto-reload
@@ -1608,7 +1631,7 @@ int main() {
   // uncomment in order to reset minutes and hours to zero.
   // ds_reset_clock();
 
-  Timer0Init(); // display refresh & switch read
+  timer0Init(); // display refresh & switch read
 
 #ifdef WITH_NMEA
   uart1_init();   // setup uart
