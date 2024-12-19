@@ -36,6 +36,10 @@ volatile int8_t counter_100ms;
 volatile int8_t counter_500ms;
 volatile int8_t counter_1sec;
 volatile int8_t counter_blinker_slow;
+#if !defined(WITHOUT_INACTIVITY_TIMER)
+// Contains the number of seconds that have passed since any button was pressed
+volatile int8_t counter_inactivity;
+#endif
 
 volatile __bit blinker_slow;
 volatile __bit blinker_fast;
@@ -177,6 +181,9 @@ inline void timer100ms() {
   }
 
   if (10 == counter_1sec) {
+#if !defined(WITHOUT_INACTIVITY_TIMER)
+    counter_inactivity++; // 1 sec increment
+#endif
     counter_1sec = 0;
     timer1sec();
   }
@@ -786,14 +793,33 @@ inline void displayScreen() {
   }
 }
 
-inline void adjustDisplayMode() {
-  if (display_mode == DM_NORMAL && buttons_mode == K_NORMAL) {
-    uint8_t ss = rtc_table[DS_ADDR_SECONDS];
-    if (ss < 0x20) {
-      return;
+#if !defined(WITHOUT_INACTIVITY_TIMER)
+inline void handleInactivityTimer(enum Event ev) {
+  if (ev != EV_NONE) {
+    counter_inactivity = 0;
+  }
+
+  if (counter_inactivity > 10) {
+    counter_inactivity = 0;
+#ifdef WITH_NMEA
+    if (display_mode == DM_NMEA_TIMEZONE || display_mode == DM_NMEA_DST ||
+        display_mode == DM_NMEA_AUTOUPDATE) {
+      restoreNmeaValues();
     }
+#endif
+    buttons_mode = K_NORMAL;
+  }
+}
+#endif
+
+inline void adjustDisplayMode() {
+    if (display_mode == DM_NORMAL && buttons_mode == K_NORMAL) {
+      uint8_t ss = rtc_table[DS_ADDR_SECONDS];
+      if (ss < 0x20) {
+        return;
+      }
 #ifdef AUTO_SHOW_TEMPERATURE
-    else if (ss < 0x25) {
+      else if (ss < 0x25) {
       display_mode = DM_TEMPERATURE;
     }
 #endif
@@ -1641,13 +1667,11 @@ int main() {
 
   // LOOP
   while (1) {
-    enum Event ev;
-
     while (!loop_gate)
       ;            // wait for open every 100ms
     loop_gate = 0; // close gate
 
-    ev = event;
+    enum Event ev = event;
     event = EV_NONE;
 
     // sample adc, run frequently
@@ -1685,6 +1709,9 @@ int main() {
     handleButtonEvents(ev);
 
     clearFrameBuffer();
+#if !defined(WITHOUT_INACTIVITY_TIMER)
+    handleInactivityTimer(ev);
+#endif
     adjustDisplayMode();
     displayScreen();
 

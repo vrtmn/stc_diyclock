@@ -252,6 +252,15 @@ inline void backupNmeaValues() {
   nmea_prev_autosync = nmea_autosync;
 }
 
+#if !defined(WITHOUT_INACTIVITY_TIMER)
+inline void restoreNmeaValues() {
+  nmea_tz_hr = nmea_prev_tz_hr;
+  nmea_tz_min = nmea_prev_tz_min;
+  nmea_tz_dst = nmea_prev_tz_dst;
+  nmea_autosync = nmea_prev_autosync;
+}
+#endif
+
 // Converts two decimal characters into an integer
 uint8_t decChars2int(char *p) { return (*p - '0') * 10 + (*(p + 1) - '0'); }
 

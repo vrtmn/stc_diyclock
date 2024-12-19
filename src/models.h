@@ -44,6 +44,7 @@ This file defines configurations for clock models.
 #define WITHOUT_ALARM
 #define WITHOUT_WEEKDAY
 #define WITHOUT_H12_24_SWITCH
+#define WITHOUT_INACTIVITY_TIMER
 #define WITH_NMEA_DEVICE_SWITCH
 #define MOVE_UART_PINS_TO_P3_6
 
@@ -58,6 +59,7 @@ This file defines configurations for clock models.
 #define WITHOUT_ALARM
 #define WITHOUT_WEEKDAY
 #define WITHOUT_H12_24_SWITCH
+#define WITHOUT_INACTIVITY_TIMER
 #define WITH_NMEA_DEVICE_SWITCH
 #define MAP_SW2_TO_P1_4
 
