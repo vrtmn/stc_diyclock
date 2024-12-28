@@ -27,7 +27,9 @@ This repo is forked from [https://github.com/zerog2k/stc_diyclock](https://githu
 ### December 2024:
  - Updated ESP8266 script for NTP synchronization
  - Improved documentation
- - Minor fixes/improvements
+ - Major refactoring, improved code quality and readability, reduced firmware size
+ - Fixed a bug in the NMEA crc calculation logic
+ - Added an inactivity timer - the clock will go into normal mode from any screen if no buttons are pressed for 10 seconds
   
 ### November 2024:
 
@@ -42,17 +44,24 @@ This repo is forked from [https://github.com/zerog2k/stc_diyclock](https://githu
 - Some changes in screens and button functions (according to my personal preferences)
 
 ## Features
-* time display/set (12/24 hour modes)
-* date display/set (with reversible MM/YY, YY/MM display)
-* day of week
-* year
-* seconds display/reset
-* display auto-dim
-* temperature display in C or F (with user-defined offset adjustment)
-* alarm with snooze
-* hourly chime
-* [Time synchronization](docs/nmea/NMEA.md) via GPS or NTP protocol
-* [6 digit (HH:MM:SS) version](docs/6-digit/6-digit.md) support
+
+| Name | Enabled by default | Constant(s) in code |
+|---- | ----|----|
+| Time display/set | N/A | N/A |
+| Seconds display/reset | N/A | N/A |
+| Automatic display dimming | N/A | N/A |
+| 12/24 hour modes| Yes | WITHOUT_H12_24_SWITCH |
+| Date display/set (MM/YY or YY/MM) | Yes | WITHOUT_DATE |
+| Day of week | Yes | WITHOUT_WEEKDAY, AUTO_SHOW_WEEKDAY |
+| Year | Yes | WITHOUT_DATE, AUTO_SHOW_DATE |
+| Temperature display in C or F (with user-defined offset adjustment) | Yes | AUTO_SHOW_TEMPERATURE |
+| Alarm with snooze | Yes | WITHOUT_ALARM |
+| Hourly chime | Yes | WITHOUT_CHIME |
+| [Time synchronization](docs/nmea/NMEA.md) via GPS or NTP protocol | No | WITH_NMEA, WITH_NMEA_DEVICE_SWITCH |
+| [6 digit (HH:MM:SS) version](docs/6-digit/6-digit.md) support | No | SIX_DIGITS |
+| Inactivity timer | Yes | WITHOUT_INACTIVITY_TIMER |
+
+Most features can be enabled or disabled using the corresponding compilation constants.
 
 ## Hardware
 
