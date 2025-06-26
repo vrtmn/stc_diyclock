@@ -32,6 +32,7 @@ SDCCOPTS ?= --code-size $(STCCODESIZE) --stack-auto --iram-size 256 --xram-size 
 > Synchronization is forced when one of the NMEA settings is changed and can also be forced by long pressing the **S1** and **S2** buttons from the main screen (HH:MM).
 
 ## Hardware
+### Version 1 (modification of an already assembled kit)
 
 I wanted an NMEA device to be ON only during the synchronization process. To achieve this, I added a transistor switch connected to **pin 6 (P1.3)**. There is also an LED indicating that the NMEA device is on. 
 
@@ -39,7 +40,7 @@ The firmware turns on the NMEA device according to the user-defined update inter
 
 The NMEA data is received on pin **21**.
 
-[![Circuit](../4-digit-circuit/4-digit-circuit.jpg)](../4-digit-circuit/4-digit-circuit.jpg)
+[![Circuit](../4-digit-circuit/v1/4-digit-circuit.jpg)](../4-digit-circuit/v1/4-digit-circuit.jpg)
 
 > **Note:** In my version of this DIY kit, both pins **6** and **21** are not connected to anything else on the board (just "hanging in the air"). This means that the wires to these pins musted be soldered in advance, before soldering the 7-segments indicators.
 
@@ -57,13 +58,21 @@ It is not practical to use GPS synchronization indoors because the receiver does
 
 For the NTP syncronisation I decided to use a `WeMos D1 Mini` board. It has a build-in voltage regulator (5V -> 3.3V), so it can be powered directly from 5V and it also has a USB-C connector so can be directly connected to a laptop to upload code.
 
-The transistor switch together with the LED and connector are mounted on a piece of prototyping board soldered to the WeMos D1 mini board.
-
-![WeMos D1 Mini](images/WeMosD1Mini.jpg)
-
 The code is pretty simple, can be found [here](ESP8266_ntp/ESP8266_ntp.ino) and uploaded to the board using the Arduino studio.
 
 On the first run (or when the saved WiFi network is not available), it creates a WiFi access point with the name `Hodiki` and password `24diyclock24`. Once connected to this access point, you can specify the WiFi network (name and password) that should be used for sending NTP requests.
+
+The transistor switch together with the LED and connector are mounted on a piece of prototyping board soldered to the WeMos D1 mini board.
+
+## Photos
+<details>
+  <summary><b>Version 1, integration into the already assembled kit</b></summary>
+
+<br>
+
+The transistor switch together with the LED and connector are mounted on a piece of prototyping board soldered to the WeMos D1 mini board.
+
+![WeMos D1 Mini](images/WeMosD1Mini.jpg)
 
 The original case has enough space for the board:
 ![Back view](images/nmea-back-off.jpg)
@@ -79,3 +88,5 @@ The LED is indicating that the synchronization is in progress:
 ![Details](images/nmea-details-1.jpg)
 
 ![Details](images/nmea-details-2.jpg)
+
+</details>
