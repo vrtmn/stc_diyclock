@@ -24,6 +24,8 @@ ifeq ($(GREEN6), 1)
 CFLAGS += -DGREEN_6
 else ifeq ($(GREEN4), 1)
 CFLAGS += -DGREEN_4
+else ifeq ($(PAARSE4), 1)
+CFLAGS += -DPAARSE_4
 else ifeq ($(MINIMAL4), 1)
 CFLAGS += -DMINIMAL_4
 else ifeq ($(MINIMAL6), 1)

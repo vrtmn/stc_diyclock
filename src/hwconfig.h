@@ -45,7 +45,11 @@
 // Buttons
 // 
 
+#ifdef MAP_SW1_TO_P1_3
+#define SW1     P1_3
+#else
 #define SW1     P3_1
+#endif
 
 #ifdef MAP_SW2_TO_P1_4
 #define SW2     P1_4
@@ -58,9 +62,11 @@
 // 
 
 #if defined(WITH_NMEA) && defined(WITH_NMEA_DEVICE_SWITCH)
-#define NMEA_DEVICE_PORT P1_3
-#define NMEA_DEVICE_ON (NMEA_DEVICE_PORT=0)
-#define NMEA_DEVICE_OFF (NMEA_DEVICE_PORT=1)
+#if !defined(NMEA_DEVICE_SWITCH_PORT)
+    #define NMEA_DEVICE_SWITCH_PORT P1_3
+#endif
+#define NMEA_DEVICE_ON (NMEA_DEVICE_SWITCH_PORT=0)
+#define NMEA_DEVICE_OFF (NMEA_DEVICE_SWITCH_PORT=1)
 #endif 
 
 //
