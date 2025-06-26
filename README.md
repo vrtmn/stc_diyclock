@@ -6,22 +6,22 @@ Firmware replacement for STC15 MCU-based DIY Clock Kit available on banggood, al
 <p align="center" width="100%">
 <img src="images/4d-front.jpg" width="85%"><br>
 <img style="padding-top: 5px;padding-bottom: 2px;" width="16%" src="images/arrow.png"/><br>
-<img src="docs/6-digit/images/6d-front-4.jpg">
+<img src="docs/6-digit/v1/images/6d-front-4.jpg">
 </p>
 
 ## Intro
 
 This repo is forked from [https://github.com/zerog2k/stc_diyclock](https://github.com/zerog2k/stc_diyclock), which has been archived.
 
-### Acknowledgments
-- [zerog2k](https://github.com/zerog2k) - for the alternative STC DIY Clock firmware and for maintaining the original repo for 6 years
-- [venustrg](https://github.com/venustrg) - for implementing synchronization with NMEA devices
-
 ### Hardware versions
 
 > There are multiple revisions/versions of this DIY kit. The version I have is based on the `STC15W408AS` microcontroller, it doesn't have the 3rd button and the music chip (the documentation is here: [1](docs/manuals/Manual_STC15W408AS-no-music-chip-1.jpg), [2](docs/manuals/Manual_STC15W408AS-no-music-chip-1.jpg)). 
-> 
-> I made some changes both in hardware and firmware ([6 digit (HH:MM:SS) version](docs/6-digit/6-digit.md)) and I only tested them with the kit version mentioned above. If your version is different from mine, please consider using the original repo instead.
+> If your version is different from mine, please consider using the original repo instead.
+
+## Quick links
+- [6 digit (HH:MM:SS) modification](docs/6-digit/v1/6-digit.md)
+- [Time synchronization (GPS / NTP)](docs/nmea/NMEA.md)
+- [New firmware operation flow  (4 digit)](docs/4-digit-clock-operational-flow.png)
 
 ## Changelog
 ### June 2025:
@@ -36,7 +36,7 @@ This repo is forked from [https://github.com/zerog2k/stc_diyclock](https://githu
   
 ### November 2024:
 
-- Added support for the [6-digit (HH:MM:SS)](docs/6-digit/6-digit.md) version
+- Added support for the [6-digit (HH:MM:SS)](docs/6-digit/v1/6-digit.md) version
 - Updated documentation
 - The firmware was tested for both 4-digit and 6-digit version
 
@@ -62,7 +62,7 @@ This repo is forked from [https://github.com/zerog2k/stc_diyclock](https://githu
 | Alarm with snooze | Yes | WITHOUT_ALARM |
 | Hourly chime | Yes | WITHOUT_CHIME |
 | [Time synchronization](docs/nmea/NMEA.md) via GPS or NTP protocol | No | WITH_NMEA, WITH_NMEA_DEVICE_SWITCH |
-| [6 digit (HH:MM:SS) version](docs/6-digit/6-digit.md) support | No | SIX_DIGITS |
+| [6 digit (HH:MM:SS) version](docs/6-digit/v1/6-digit.md) support | No | SIX_DIGITS |
 | Inactivity timer | Yes | WITHOUT_INACTIVITY_TIMER |
 
 Most features can be enabled or disabled using the corresponding compilation constants.
@@ -146,14 +146,12 @@ As the original firmware loaded on an STC MCU cannot be downloaded or backed up,
 - [New firmware operation flow  (4 digit)](docs/4-digit-clock-operational-flow.png)
 - [Original firmware operation flow](docs/operation_flow_original.png)
 
+## Acknowledgments
+- [zerog2k](https://github.com/zerog2k) - for the alternative STC DIY Clock firmware and for maintaining the original repo for 6 years
+- [venustrg](https://github.com/venustrg) - for implementing synchronization with NMEA devices
+
 ## References
 http://www.stcmcu.com (mostly in Chinese)
-
-stc15f204ea english datasheet:
-http://www.stcmcu.com/datasheet/stc/stc-ad-pdf/stc15f204ea-series-english.pdf
-
-stc15w408as english datasheet:
-http://www.stcmicro.com/datasheet/STC15F2K60S2-en2.pdf
 
 sdcc user guide:
 http://sdcc.sourceforge.net/doc/sdccman.pdf
@@ -163,6 +161,3 @@ http://jjmz.free.fr/?tag=stc15l204
 
 Maxim DS1302 datasheet:
 http://datasheets.maximintegrated.com/en/ds/DS1302.pdf
-
-VE3LNY's adaptation of this hardware to AVR (he has some interesting AVR projects there):
-http://www.qsl.net/v/ve3lny/travel_clock.html
