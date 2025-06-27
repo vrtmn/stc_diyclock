@@ -24,6 +24,9 @@ This repo is forked from [https://github.com/zerog2k/stc_diyclock](https://githu
 > I made some changes both in hardware and firmware ([6 digit (HH:MM:SS) version](docs/6-digit/6-digit.md)) and I only tested them with the kit version mentioned above. If your version is different from mine, please consider using the original repo instead.
 
 ## Changelog
+### June 2025:
+- Added the ability to adjust display brightness
+
 ### December 2024:
  - Updated ESP8266 script for NTP synchronization
  - Improved documentation
@@ -50,6 +53,7 @@ This repo is forked from [https://github.com/zerog2k/stc_diyclock](https://githu
 | Time display/set | N/A | N/A |
 | Seconds display/reset | N/A | N/A |
 | Automatic display dimming | N/A | N/A |
+| Adjusting display brightness | N/A | N/A |
 | 12/24 hour modes| Yes | WITHOUT_H12_24_SWITCH |
 | Date display/set (MM/YY or YY/MM) | Yes | WITHOUT_DATE |
 | Day of week | Yes | WITHOUT_WEEKDAY, AUTO_SHOW_WEEKDAY |
