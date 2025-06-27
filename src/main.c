@@ -9,6 +9,7 @@
 #include "models.h"
 #include "adc.h"
 #include "ds1302.h"
+#include "eeprom_consts.h"
 #include "led.h"
 #include "hwconfig.h"
 #include "buttonsmode.h"
@@ -16,14 +17,17 @@
 #include "event.h"
 #include "buttonmonitor.h"
 
-#if !defined(LIGHTVAL_LOWEST_VALUE)
-#define LIGHTVAL_LOWEST_VALUE   4           // Max. brightness
-#endif
-#define LIGHTVAL_HIGHEST_VALUE  36          // Min. brightness
+#define BRIGHTNESS_HIGH_DEFAULT_VALUE   0x01
+#define BRIGHTNESS_LOW_DEFAULT_VALUE    0x24
+#define BRIGHTNESS_LOW_MAX_VALUE        0x46
+#define BRIGHTNESS_NIGHT_DEFAULT_VALUE  0x34
+#define BRIGHTNESS_NIGHT_MAX_VALUE      0x71
+#define LIGHT_SENSOR_NIGHT_TH           245         // Night mode threshold
+#define LIGHT_SENSOR_MAX_VALUE          (255 - (255 - LIGHT_SENSOR_NIGHT_TH))
 
-#define LIGHT_SENSOR_NIGHT_TH   245         // Night mode threshold
-#define LIGHTVAL_NIGHT_VALUE    52          // Night brightness
-#define LIGHT_SENSOR_MAX_VALUE  (255 - (255 - LIGHT_SENSOR_NIGHT_TH))
+uint8_t brightnessHigh = BRIGHTNESS_HIGH_DEFAULT_VALUE;
+uint8_t brightnessLow = BRIGHTNESS_LOW_DEFAULT_VALUE;
+uint8_t brightnessNight = BRIGHTNESS_NIGHT_DEFAULT_VALUE;
 
 uint8_t count;     // main loop counter
 uint8_t temp;      // temperature sensor value
@@ -115,6 +119,8 @@ __bit is_nmea_receiving_on = 0;
 void enable_nmea_receiving();
 void disable_nmea_receiving();
 #endif
+
+void saveSettings();
 
 volatile enum Event event;
 
@@ -584,6 +590,57 @@ inline void displayNmeaAutoupdate() {
 #endif
 #endif
 
+inline void displayBrightnessHigh() {
+  fillDigit(0, LED_b);
+  fillDigit(1, LED_h);
+  
+  #ifdef SIX_DIGITS
+  if (!flash_45 || blinker_fast || S1_LONG) {
+    fillDigit(4, brightnessHigh  >> 4);
+    fillDigit(5, brightnessHigh & 0x0F);
+  }
+  #else
+  if (!flash_23 || blinker_fast || S1_LONG) {
+    fillDigit(2, brightnessHigh  >> 4);
+    fillDigit(3, brightnessHigh & 0x0F);
+  }
+  #endif
+}
+
+inline void displayBrightnessLow() {
+  fillDigit(0, LED_b);
+  fillDigit(1, LED_l);
+
+  #ifdef SIX_DIGITS
+  if (!flash_45 || blinker_fast || S1_LONG) {
+    fillDigit(4, brightnessLow  >> 4);
+    fillDigit(5, brightnessLow & 0x0F);
+  }
+  #else
+  if (!flash_23 || blinker_fast || S1_LONG) {
+    fillDigit(2, brightnessLow  >> 4);
+    fillDigit(3, brightnessLow & 0x0F);
+  }
+  #endif
+}
+
+inline void displayBrightnessNight() {
+  fillDigit(0, LED_b);
+  fillDigit(1, LED_n);
+
+  #ifdef SIX_DIGITS
+  if (!flash_45 || blinker_fast || S1_LONG) {
+    fillDigit(4, brightnessNight  >> 4);
+    fillDigit(5, brightnessNight & 0x0F);
+  }
+  #else
+  if (!flash_23 || blinker_fast || S1_LONG) {
+    fillDigit(2, brightnessNight  >> 4);
+    fillDigit(3, brightnessNight & 0x0F);
+  }
+  #endif
+}
+
 #if !defined(SIX_DIGITS)
 inline void displaySeconds() {
 #ifdef SHOW_MINUTES_WITH_SECONDS
@@ -749,6 +806,18 @@ inline void displayScreen() {
     break;
 #endif
 
+  case DM_BRIGHTNESS_HIGH:
+    displayBrightnessHigh();
+    break;
+
+  case DM_BRIGHTNESS_LOW:
+    displayBrightnessLow();
+    break;
+
+  case DM_BRIGHTNESS_NIGHT:
+    displayBrightnessNight();
+    break;
+
 #if !defined(SIX_DIGITS)
   case DM_SECONDS:
     displaySeconds();
@@ -858,17 +927,17 @@ inline void processADCValues() {
     */
 
     uint8_t adcLight = getADCResult8(ADC_LIGHT);
-    uint8_t lightvalMax = LIGHTVAL_HIGHEST_VALUE;
+    uint8_t lightvalMax = brightnessLow;
 
     // Check for the night mode
     if (adcLight >= LIGHT_SENSOR_NIGHT_TH) {
-      lightvalMax = LIGHTVAL_NIGHT_VALUE;
+      lightvalMax = brightnessNight;
     }
 
     // Calculate the lightval
     lightval = adcLight * lightvalMax / LIGHT_SENSOR_MAX_VALUE;
-    if (lightval < LIGHTVAL_LOWEST_VALUE) {
-      lightval = LIGHTVAL_LOWEST_VALUE;
+    if (lightval < brightnessHigh) {
+      lightval = brightnessHigh;
     }
   }
 }
@@ -1079,7 +1148,7 @@ inline void handleButtonsSetMinute(enum Event ev) {
     backupNmeaValues();
     buttons_mode = K_NMEA_SET_TZ_HOUR;
 #else
-    buttons_mode = K_NORMAL;
+    buttons_mode = K_BRIGHTNESS_HIGH;
 #endif
 #else
     buttons_mode = K_SET_HOUR_12_24;
@@ -1103,7 +1172,7 @@ inline void handleButtonsSetSecond6d(enum Event ev) {
     backupNmeaValues();
     buttons_mode = K_NMEA_SET_TZ_HOUR;
 #else
-    buttons_mode = K_NORMAL;
+    buttons_mode = K_BRIGHTNESS_HIGH;
 #endif
 #else
     buttons_mode = K_SET_HOUR_12_24;
@@ -1123,7 +1192,7 @@ inline void handleButtonsSet12h24(enum Event ev) {
     backupNmeaValues();
     buttons_mode = K_NMEA_SET_TZ_HOUR;
 #else
-    buttons_mode = K_NORMAL;
+    buttons_mode = K_BRIGHTNESS_HIGH;
 #endif
   }
 }
@@ -1192,16 +1261,61 @@ inline void handleButtonsNmeaSetAutoupdate(enum Event ev) {
     }
   } else if (ev == EV_S2_SHORT) {
     nmea_seconds_to_sync = NMEA_AUTOSYNC_DELAY;
+    buttons_mode = K_BRIGHTNESS_HIGH;
+  }
+}
+#endif
+
+inline void handleButtonsBrightnessHigh(enum Event ev) {  
+  flash_23 = 1;
+  display_mode = DM_BRIGHTNESS_HIGH;
+  
+  if ((ev == EV_S1_SHORT) || (S1_LONG && blinker_fast)) {
+    if (brightnessHigh + 1 > brightnessLow) {
+      brightnessHigh = BRIGHTNESS_HIGH_DEFAULT_VALUE;
+    } else {
+      brightnessHigh += 1;
+    }    
+  } else if (ev == EV_S2_SHORT) {
+    buttons_mode = K_BRIGHTNESS_LOW;
+  }
+}
+
+inline void handleButtonsBrightnessLow(enum Event ev) {  
+  flash_23 = 1;
+  display_mode = DM_BRIGHTNESS_LOW;
+  
+  if ((ev == EV_S1_SHORT) || (S1_LONG && blinker_fast)) {
+    if (brightnessHigh + 1 > BRIGHTNESS_LOW_MAX_VALUE) {
+      brightnessLow = brightnessHigh;
+    } else {
+      brightnessLow += 1;
+    }    
+  } else if (ev == EV_S2_SHORT) {
+    buttons_mode = K_BRIGHTNESS_NIGHT;
+  }
+}
+
+inline void handleButtonsBrightnessNight(enum Event ev) {  
+  flash_23 = 1;
+  display_mode = DM_BRIGHTNESS_NIGHT;
+  
+  if ((ev == EV_S1_SHORT) || (S1_LONG && blinker_fast)) {
+    if (brightnessNight + 1 > BRIGHTNESS_NIGHT_MAX_VALUE) {
+      brightnessNight = brightnessHigh;
+    } else {
+      brightnessNight += 1;
+    }    
+  } else if (ev == EV_S2_SHORT) {
+    saveSettings();
     if (nmea_prev_tz_hr != nmea_tz_hr || nmea_prev_tz_min != nmea_tz_min ||
         nmea_prev_tz_dst != nmea_tz_dst ||
         nmea_prev_autosync != nmea_autosync) {
-      nmea_save_tz();
       enable_nmea_receiving();
     }
     buttons_mode = K_NORMAL;
   }
 }
-#endif
 
 inline void handleButtonsTemperature(enum Event ev) {
   display_mode = DM_TEMPERATURE;
@@ -1511,6 +1625,18 @@ void handleButtonEvents(enum Event ev) {
     break;
 #endif
 
+  case K_BRIGHTNESS_HIGH:
+    handleButtonsBrightnessHigh(ev);
+    break;
+
+  case K_BRIGHTNESS_LOW:
+    handleButtonsBrightnessLow(ev);
+    break;
+
+  case K_BRIGHTNESS_NIGHT:
+    handleButtonsBrightnessNight(ev);
+    break;
+
   case K_TEMP_DISP:
     handleButtonsTemperature(ev);
     break;
@@ -1637,6 +1763,46 @@ void processNmeaUpdate() {
 #endif
 
 //
+// Brightness settings
+//
+
+inline void loadBrightnessSettings() {
+  brightnessHigh = (int8_t)IapReadByte(IAP_BRIGHTNESS_HIGH);
+  brightnessLow = IapReadByte(IAP_BRIGHTNESS_LOW);
+  brightnessNight = IapReadByte(IAP_BRIGHTNESS_NIGHT);
+  
+  if (brightnessHigh == 0xff) {
+    brightnessHigh = BRIGHTNESS_HIGH_DEFAULT_VALUE;
+  }
+
+  if (brightnessLow == 0xff) {
+    brightnessLow = BRIGHTNESS_LOW_DEFAULT_VALUE;
+  }
+
+  if (brightnessNight == 0xff) {
+    brightnessNight = BRIGHTNESS_NIGHT_DEFAULT_VALUE;
+  }
+}
+
+inline void saveBrightnessSettings() {
+  IapProgramByte(IAP_BRIGHTNESS_HIGH, brightnessHigh);
+  IapProgramByte(IAP_BRIGHTNESS_LOW, brightnessLow);
+  IapProgramByte(IAP_BRIGHTNESS_NIGHT, brightnessNight);
+}
+
+inline void saveSettings() {
+  Delay(10);
+  IapEraseSector(IAP_ADDRESS);
+  Delay(10);
+
+#ifdef WITH_NMEA
+    nmea_save_tz();
+#endif
+
+  saveBrightnessSettings();
+}
+
+//
 // main
 //
 
@@ -1664,6 +1830,8 @@ int main() {
   nmea_load_tz(); // read TZ/DST from eeprom
   nmea_seconds_to_sync = NMEA_AUTOSYNC_DELAY;
 #endif
+
+  loadBrightnessSettings();
 
   // LOOP
   while (1) {

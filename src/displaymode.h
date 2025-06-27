@@ -18,6 +18,10 @@ enum DisplayMode {
   DM_NMEA_AUTOUPDATE,
 #endif
 
+  DM_BRIGHTNESS_HIGH,
+  DM_BRIGHTNESS_LOW,
+  DM_BRIGHTNESS_NIGHT,
+
 #if !defined(SIX_DIGITS)
   DM_SECONDS,
 #endif

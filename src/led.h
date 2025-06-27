@@ -20,6 +20,7 @@
 #define LED_e       (LED_a + ('E' - 'A'))
 #define LED_f       (LED_a + ('F' - 'A'))
 #define LED_h       (LED_a + ('H' - 'A'))
+#define LED_l       (LED_a + ('L' - 'A'))
 #define LED_n       (LED_a + ('N' - 'A'))
 #define LED_o       (LED_a + ('O' - 'A'))
 #define LED_p       (LED_a + ('P' - 'A'))

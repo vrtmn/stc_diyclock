@@ -30,7 +30,6 @@ This file defines configurations for clock models.
 #define MAP_SW2_TO_P1_4
 #define WITH_NMEA_DEVICE_SWITCH
 #define WITHOUT_H12_24_SWITCH
-#define LIGHTVAL_LOWEST_VALUE 1
 #define WITH_DEBUG_SCREENS
 
 #elif defined(MINIMAL_4)
@@ -75,7 +74,6 @@ This file defines configurations for clock models.
 #define NMEA_DEVICE_SWITCH_PORT P3_1
 #define WITH_NMEA_DEVICE_SWITCH
 #define WITHOUT_H12_24_SWITCH
-#define LIGHTVAL_LOWEST_VALUE 1
 #define WITH_DEBUG_SCREENS
 
 #endif  

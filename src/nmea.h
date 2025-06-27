@@ -1,14 +1,8 @@
 #include "eeprom.h"
+#include "eeprom_consts.h"
 #include <time.h>
 
 #define BAUDRATE 9600 // serial port speed (4800/9600 - standard for GPS)
-
-#define IAP_TZ_ADDRESS 0x0000
-#define IAP_TZ_HR      0x0000
-#define IAP_TZ_MIN     0x0001
-#define IAP_TZ_DST     0x0002
-#define IAP_TZ_AUTOSYNC 0x0003
-
 #define OSCILLATOR_FREQUENCY    11059200  // 11.0592MHz
 
 volatile uint32_t nmea_seconds_to_sync = 0;
@@ -398,9 +392,6 @@ void nmea2localtime() {
 }
 
 void nmea_save_tz(void) {
-  Delay(10);
-  IapEraseSector(IAP_TZ_ADDRESS);
-  Delay(10);
   IapProgramByte(IAP_TZ_HR, (uint8_t)nmea_tz_hr);
   IapProgramByte(IAP_TZ_MIN, nmea_tz_min);
   IapProgramByte(IAP_TZ_DST, nmea_tz_dst);
@@ -414,15 +405,10 @@ void nmea_load_tz(void) {
   nmea_autosync = IapReadByte(IAP_TZ_AUTOSYNC);
   
   // HR after reflash will be == 0xff == -1 by default
-  if (nmea_tz_hr < -12 || nmea_tz_hr > 12) {
+  if ((uint8_t)nmea_tz_hr == 0xff) {
     nmea_tz_hr = 0;
-  }
-
-  if (nmea_tz_min == 0xff || nmea_tz_min && nmea_tz_min != 30 && nmea_tz_min != 45) {
     nmea_tz_min = 0;
-  }
-
-  if (nmea_tz_dst == 0xff || nmea_tz_dst > 1) {
     nmea_tz_dst = 0;
+    nmea_autosync = NMEA_AUTOSYNC_6H;
   }
 }

@@ -24,6 +24,10 @@ enum ButtonsMode {
   K_NMEA_SET_AUTOUPDATE,
 #endif
 
+  K_BRIGHTNESS_LOW,
+  K_BRIGHTNESS_HIGH,
+  K_BRIGHTNESS_NIGHT,
+
 #if !defined(SIX_DIGITS)
   K_SEC_DISP,
 #endif
