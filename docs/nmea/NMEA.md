@@ -44,7 +44,7 @@ NMEA data is received on pin **21 (P3.6)** - the UART interface is logically mov
 
 > **Note:** In my version of this DIY kit, both pins **6 (P1.3)** and **21 (P3.6)** are not connected to anything else on the board (just "hanging in the air"). This means that the wires to these pins musted be soldered in advance, before soldering the 7-segments indicators, or you will have to solder the wires directly to the MCU.
 
-### Version 2
+### Version 2 (connecting to the UART pins)
 
 Similar to the first version, I wanted an NMEA device to be ON only during the synchronization process. But this time I added NMEA support before soldering the kit and came up with a slighly better solution.
 
