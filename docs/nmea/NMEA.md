@@ -38,11 +38,25 @@ I wanted an NMEA device to be ON only during the synchronization process. To ach
 
 The firmware turns on the NMEA device according to the user-defined update interval, waits for data from the device, and turns it off. The maximum duration of the synchronization process is 30 minutes, it is hardcoded (see the `NMEA_MAX_SYNC_DURATION` constant).
 
-The NMEA data is received on pin **21**.
+NMEA data is received on pin **21 (P3.6)** - the UART interface is logically moved to pins **P3_6 (rx)** and **P3_7 (tx)** - see constant **MOVE_UART_PINS_TO_P3_6**.
 
 [![Circuit](../4-digit-circuit/v1/4-digit-circuit.jpg)](../4-digit-circuit/v1/4-digit-circuit.jpg)
 
-> **Note:** In my version of this DIY kit, both pins **6** and **21** are not connected to anything else on the board (just "hanging in the air"). This means that the wires to these pins musted be soldered in advance, before soldering the 7-segments indicators.
+> **Note:** In my version of this DIY kit, both pins **6 (P1.3)** and **21 (P3.6)** are not connected to anything else on the board (just "hanging in the air"). This means that the wires to these pins musted be soldered in advance, before soldering the 7-segments indicators, or you will have to solder the wires directly to the MCU.
+
+### Version 2
+
+Similar to the first version, I wanted an NMEA device to be ON only during the synchronization process. But this time I added NMEA support before soldering the kit and came up with a slighly better solution.
+
+I connected switches **S1** and **S2** to pins **6 (P1.3)** and **7 (P1.4)** respectively. Pins **15 (P3.0)** and **16 (P3.1)** became "free" and I connected the NMEA device (including the transistor on/off switch) to the standard UART pins on the board. Now solution is modular and more reliable.
+
+[![Circuit](../4-digit-circuit/v2/4-digit-v2-circuit.png)](../4-digit-circuit/v2/4-digit-v2-circuit.png)
+
+[![Board](../4-digit-circuit/v2/4-digit-v2-board.jpg)](../4-digit-circuit/v2/4-digit-v2-board.jpg)
+
+[![WeMos D1 Mini 2](images_v2/wemos_d1_mini-v2-2.jpg)](images_v2/wemos_d1_mini-v2-2.jpg)
+
+[![WeMos D1 Mini 1](images_v2/wemos_d1_mini-v2-1.jpg)](images_v2/wemos_d1_mini-v2-1.jpg)
 
 ## GPS syncronisation
 I experimented with two types of GPS receivers: `NEO-6MV2` and `NEO-M8N`. Both work great, but the second one receives more satellites, supports multiple GNSS systems (Beidou, Galileo, GLONASS, GPS/QZSS), returns the result quicker, consumes less power.
