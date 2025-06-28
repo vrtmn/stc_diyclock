@@ -52,12 +52,6 @@ I connected switches **S1** and **S2** to pins **6 (P1.3)** and **7 (P1.4)** res
 
 [![Circuit](../4-digit-circuit/v2/4-digit-v2-circuit.png)](../4-digit-circuit/v2/4-digit-v2-circuit.png)
 
-[![Board](../4-digit-circuit/v2/4-digit-v2-board.jpg)](../4-digit-circuit/v2/4-digit-v2-board.jpg)
-
-[![WeMos D1 Mini 2](images_v2/wemos_d1_mini-v2-2.jpg)](images_v2/wemos_d1_mini-v2-2.jpg)
-
-[![WeMos D1 Mini 1](images_v2/wemos_d1_mini-v2-1.jpg)](images_v2/wemos_d1_mini-v2-1.jpg)
-
 ## GPS syncronisation
 I experimented with two types of GPS receivers: `NEO-6MV2` and `NEO-M8N`. Both work great, but the second one receives more satellites, supports multiple GNSS systems (Beidou, Galileo, GLONASS, GPS/QZSS), returns the result quicker, consumes less power.
 > **Note:** Strings returned by the `NEO-M8N` receiver have the (`$GNRMC`) prefix instead of the `$GPRMC` returned by the `NEO-6MV2`. 
@@ -102,5 +96,16 @@ The LED is indicating that the synchronization is in progress:
 ![Details](images/nmea-details-1.jpg)
 
 ![Details](images/nmea-details-2.jpg)
+
+</details>
+
+<details>
+  <summary><b>Version 2, connecting to the UART pins</b></summary>
+
+[![Board](../4-digit-circuit/v2/4-digit-v2-board.jpg)](../4-digit-circuit/v2/4-digit-v2-board.jpg)
+
+[![WeMos D1 Mini 2](images_v2/wemos_d1_mini-v2-2.jpg)](images_v2/wemos_d1_mini-v2-2.jpg)
+
+[![WeMos D1 Mini 1](images_v2/wemos_d1_mini-v2-1.jpg)](images_v2/wemos_d1_mini-v2-1.jpg)
 
 </details>
