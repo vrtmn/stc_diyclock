@@ -40,7 +40,7 @@ The firmware turns on the NMEA device according to the user-defined update inter
 
 NMEA data is received on pin **21 (P3.6)** - the UART interface is logically moved to pins **P3_6 (rx)** and **P3_7 (tx)** - see constant **MOVE_UART_PINS_TO_P3_6**.
 
-[![Schematic](../4-digit/v1/4-digit.jpg)](../4-digit/v1/4-digit.jpg)
+[![Schematic](../4-digit/v1/4-digit-v1.jpg)](../4-digit/v1/4-digit-v1.jpg)
 
 > **Note:** In my version of this DIY kit, both pins **6 (P1.3)** and **21 (P3.6)** are not connected to anything else on the board (just "hanging in the air"). This means that the wires to these pins musted be soldered in advance, before soldering the 7-segments indicators, or you will have to solder the wires directly to the MCU.
 
@@ -66,11 +66,13 @@ It is not practical to use GPS synchronization indoors because the receiver does
 
 For the NTP syncronisation I decided to use a `WeMos D1 Mini` board. It has a build-in voltage regulator (5V -> 3.3V), so it can be powered directly from 5V and it also has a USB-C connector so can be directly connected to a laptop to upload code.
 
-The code is pretty simple, can be found [here](ESP8266_ntp/ESP8266_ntp.ino) and uploaded to the board using the Arduino studio.
+The code is pretty simple, can be found [here](ESP8266_ntp/ESP8266_ntp.ino) and uploaded to the board using the [Arduino studio](#uploading-code-in-arduino-studio).
 
 On the first run (or when the saved WiFi network is not available), it creates a WiFi access point with the name `Hodiki` and password `24diyclock24`. Once connected to this access point, you can specify the WiFi network (name and password) that should be used for sending NTP requests.
 
-The transistor switch together with the LED and connector are mounted on a piece of prototyping board soldered to the WeMos D1 mini board.
+![Hidiki WiFi](images/Hodiki_wifi.png)
+
+The transistor switch together with the LED and connector are mounted on a pcb soldered to the WeMos D1 mini board.
 
 ## Photos
 <details>
@@ -109,3 +111,17 @@ The LED is indicating that the synchronization is in progress:
 [![WeMos D1 Mini 1](images_v2/wemos_d1_mini-v2-1.jpg)](images_v2/wemos_d1_mini-v2-1.jpg)
 
 </details>
+
+## Uploading code in Arduino Studio
+
+1. Install Arduino core for ESP8266 WiFi chip: https://github.com/esp8266/Arduino
+
+2. Select the correct board (LOLIN (WEMOS) D1 mini clone in my case)
+
+3. Upload the [sketch](ESP8266_ntp/ESP8266_ntp.ino)
+
+4. Connect to the board and specify WiFi credentials
+
+5. Open the Serial monitor (Tools\Serial monitor) and reconnect the board - a correct NMEA string shoould be printed there:
+
+![Arduino IDE console](images/ArduinoIDE_Console.png)
