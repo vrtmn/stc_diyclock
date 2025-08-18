@@ -90,6 +90,23 @@ This file defines configurations for clock models.
 #define WITHOUT_H12_24_SWITCH
 #define WITH_DEBUG_SCREENS
 
+#elif defined(MOD_BCD)
+// BCD display
+
+#define BCD_DISPLAY
+#define HW_REVISION_A
+#define SIX_DIGITS
+#define WITHOUT_DATE
+#define WITHOUT_CHIME
+#define WITHOUT_ALARM
+#define WITHOUT_WEEKDAY
+#define WITHOUT_H12_24_SWITCH
+#define WITHOUT_INACTIVITY_TIMER
+#define MAP_SW1_TO_P1_3
+#define MAP_SW2_TO_P1_4
+#define NMEA_DEVICE_SWITCH_PORT P3_1
+#define WITH_NMEA_DEVICE_SWITCH
+
 #endif  
 
 #endif // #ifndef MODELS_H

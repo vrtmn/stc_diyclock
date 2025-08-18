@@ -10,7 +10,11 @@
 #include "adc.h"
 #include "ds1302.h"
 #include "eeprom_consts.h"
+#ifdef BCD_DISPLAY
+#include "led_bcd.h"
+#else
 #include "led.h"
+#endif
 #include "hwconfig.h"
 #include "buttonsmode.h"
 #include "displaymode.h"

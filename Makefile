@@ -32,6 +32,8 @@ else ifeq ($(MOD4_MIN), 1)
 CFLAGS += -DMOD4_MIN
 else ifeq ($(MOD4_V2), 1)
 CFLAGS += -DMOD4_V2
+else ifeq ($(MOD_BCD), 1)
+CFLAGS += -DMOD_BCD
 endif
 
 SRC = src/adc.c src/ds1302.c src/eeprom.c
