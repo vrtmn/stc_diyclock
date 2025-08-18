@@ -20,16 +20,18 @@ ifeq ($(NMEA), 1)
 CFLAGS += -DWITH_NMEA
 endif
 
-ifeq ($(GREEN6), 1)
-CFLAGS += -DGREEN_6
-else ifeq ($(GREEN4), 1)
-CFLAGS += -DGREEN_4
-else ifeq ($(PAARSE4), 1)
-CFLAGS += -DPAARSE_4
-else ifeq ($(MINIMAL4), 1)
-CFLAGS += -DMINIMAL_4
-else ifeq ($(MINIMAL6), 1)
-CFLAGS += -DMINIMAL_6
+ifeq ($(MOD6), 1)
+CFLAGS += -DMOD6
+else ifeq ($(MOD6_MIN), 1)
+CFLAGS += -DMOD6_MIN
+else ifeq ($(MOD6_V2), 1)
+CFLAGS += -DMOD6_V2
+else ifeq ($(MOD4), 1)
+CFLAGS += -DMOD4
+else ifeq ($(MOD4_MIN), 1)
+CFLAGS += -DMOD4_MIN
+else ifeq ($(MOD4_V2), 1)
+CFLAGS += -DMOD4_V2
 endif
 
 SRC = src/adc.c src/ds1302.c src/eeprom.c

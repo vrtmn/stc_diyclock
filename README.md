@@ -101,17 +101,17 @@ Other options:
 
 * 6-digit version with NMEA support
 ```
-make GREEN6=1 NMEA=1
+make MOD6=1 NMEA=1
 ```
 
 * 6-digit version without NMEA support
 ```
-make GREEN6=1 NMEA=0
+make MOD6=1 NMEA=0
 ```
 
 * 4-digit version with NMEA support
 ```
-make GREEN4=1 NMEA=1
+make MOD4=1 NMEA=1
 ```
 
 ### makefile options
