@@ -19,6 +19,7 @@
 #define LED_BLANK   (LED_a + ('Z' - 'A') + 1)       // All segments are off
 #define LED_DASH    (LED_BLANK + 1)                 // '-'
 #define LED_dp      (LED_DASH + 1)                  // '.'
+#define LED_dp_mask 0b01111111                      // '.' - actual bit mask
 
 #define LED_a       10
 #define LED_b       (LED_a + ('B' - 'A'))
@@ -80,7 +81,7 @@ ledSymbols[]
     0b11111111, // Z
     0b11111111, // ' ' - blank
     0b11111111, // '-' - dash
-    0b01111111, // '.' - dot
+    LED_dp_mask, // '.' - dot
 };
 
 // Each bit determines the visibility of the corresponding dot
@@ -112,7 +113,7 @@ inline void updateDisplayBuffer() {
   for (uint8_t n = 0; n != NUMBER_OF_DIGITS; n++) {
     uint8_t tmp = ledSymbols[frameBuffer[n]];
     if (isDotVisible(n)) {
-      tmp &= 0x7F;
+      tmp &= LED_dp_mask;
     }
 
     displayBuffer[n] = tmp;
