@@ -12,6 +12,8 @@
 #include "eeprom_consts.h"
 #ifdef BCD_DISPLAY
 #include "led_bcd.h"
+#elif defined(HW_REVISION_CUSTOM_PCB)
+#include "led_pcb_v2.h"
 #else
 #include "led.h"
 #endif

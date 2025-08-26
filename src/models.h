@@ -50,7 +50,7 @@ This file defines configurations for clock models.
 #elif defined(MOD6_V2)
 // Greek clock, 6 digits (HH:mm:ss), v2
 
-#define HW_REVISION_A
+#define HW_REVISION_CUSTOM_PCB
 #define SIX_DIGITS
 #define AUTO_SHOW_TEMPERATURE 
 #define WITHOUT_WEEKDAY
