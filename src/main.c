@@ -23,6 +23,17 @@
 #include "event.h"
 #include "buttonmonitor.h"
 
+// When defined, all symbols are shown in a loop instead of time
+// #define SYMBOLS_TEST
+
+#ifdef SYMBOLS_TEST
+#define WITHOUT_INACTIVITY_TIMER
+#endif
+
+#ifdef WITH_DEBUG_SCREENS
+#define WITHOUT_INACTIVITY_TIMER
+#endif
+
 #define BRIGHTNESS_HIGH_DEFAULT_VALUE   0x01
 #define BRIGHTNESS_LOW_DEFAULT_VALUE    0x24
 #define BRIGHTNESS_LOW_MAX_VALUE        0x46
@@ -54,6 +65,10 @@ volatile int8_t counter_inactivity;
 volatile __bit blinker_slow;
 volatile __bit blinker_fast;
 volatile __bit loop_gate;
+
+#ifdef SYMBOLS_TEST
+volatile int8_t counter_symbols_test = 0;
+#endif
 
 enum DisplayMode display_mode = DM_NORMAL;
 enum ButtonsMode buttons_mode = K_NORMAL;
@@ -170,6 +185,20 @@ inline void timer1sec() {
   if (IS_NMEA_AUTOSYNC_ON && !blinker_slow && 0 == nmea_seconds_to_sync) {
     enable_nmea_receiving();
   }
+#endif
+
+#ifdef SYMBOLS_TEST
+#ifdef BCD_DISPLAY
+  counter_symbols_test++;
+  if (counter_symbols_test > 9) {
+    counter_symbols_test = 0;
+  }
+#else
+  counter_symbols_test++;
+  if (counter_symbols_test > sizeof(ledSymbolsRev) / sizeof(uint8_t) - 1) {
+    counter_symbols_test = 0;
+  }
+#endif
 #endif
 }
 
@@ -777,7 +806,22 @@ inline void displayDebug3() {
 }
 #endif
 
+#ifdef SYMBOLS_TEST
+inline void displaySymbolsTest() {
+  for (int n = 0; n < NUMBER_OF_DIGITS; n++) {
+    fillDigit(n, counter_symbols_test);
+    fillDot(n, blinker_slow);
+  }
+  return;
+}
+#endif
+
 inline void displayScreen() {
+#ifdef SYMBOLS_TEST
+  displaySymbolsTest();
+  return;
+#endif
+
   switch (display_mode) {
   case DM_NORMAL:
 #if !defined(WITHOUT_ALARM)
