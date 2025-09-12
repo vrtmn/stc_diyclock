@@ -19,7 +19,7 @@
 #define LED_BLANK   (LED_a + ('Z' - 'A') + 1)       // All segments are off
 #define LED_DASH    (LED_BLANK + 1)                 // '-'
 #define LED_dp      (LED_DASH + 1)                  // '.'
-#define LED_dp_mask 0b01111111                      // '.' - actual bit mask
+#define LED_dp_mask 0b01101111                      // '.' - actual bit mask
 
 #define LED_a       10
 #define LED_b       (LED_a + ('B' - 'A'))
@@ -44,14 +44,14 @@ ledSymbols[]
  = {
     // dp,g,f,e,d,c,b,a
     0b11111111, // 0
-    0b11111110, // 1
-    0b11111101, // 2
-    0b11111100, // 3
-    0b11110011, // 4
-    0b11111010, // 5
+    0b11110111, // 1
+    0b11111011, // 2
+    0b11110011, // 3
+    0b11111101, // 4
+    0b11110101, // 5
     0b11111001, // 6
-    0b11111000, // 7
-    0b11110111, // 8
+    0b11110001, // 7
+    0b11111110, // 8
     0b11110110, // 9
     0b11111111, // A
     0b11111111, // b
