@@ -181,7 +181,7 @@ inline void timer1sec() {
     nmea_seconds_to_sync--;
   }
 
-  if (IS_NMEA_AUTOSYNC_ON && !blinker_slow && 0 == nmea_seconds_to_sync) {
+  if (IS_NMEA_AUTOSYNC_ON && 0 == nmea_seconds_to_sync) {
     enable_nmea_receiving();
   }
 #endif
