@@ -30,10 +30,6 @@
 #define WITHOUT_INACTIVITY_TIMER
 #endif
 
-#ifdef WITH_DEBUG_SCREENS
-#define WITHOUT_INACTIVITY_TIMER
-#endif
-
 #define BRIGHTNESS_HIGH_DEFAULT_VALUE   0x01
 #define BRIGHTNESS_LOW_DEFAULT_VALUE    0x24
 #define BRIGHTNESS_LOW_MAX_VALUE        0x46
@@ -41,7 +37,10 @@
 #define BRIGHTNESS_NIGHT_MAX_VALUE      0x71
 #define LIGHT_SENSOR_NIGHT_TH           245         // Night mode threshold
 #define LIGHT_SENSOR_MAX_VALUE          (255 - (255 - LIGHT_SENSOR_NIGHT_TH))
+#define LIGHT_SENSOR_DEFAULT_CORRECTION 0
+#define LIGHT_SENSOR_MAX_CORRECTION     50
 
+uint8_t lightSensorCorrection = LIGHT_SENSOR_DEFAULT_CORRECTION;
 uint8_t brightnessHigh = BRIGHTNESS_HIGH_DEFAULT_VALUE;
 uint8_t brightnessLow = BRIGHTNESS_LOW_DEFAULT_VALUE;
 uint8_t brightnessNight = BRIGHTNESS_NIGHT_DEFAULT_VALUE;
@@ -625,6 +624,23 @@ inline void displayNmeaAutoupdate() {
 #endif
 #endif
 
+inline void displayLightSensorCorrection() {  
+  fillDigit(0, LED_s);
+  fillDigit(1, LED_c);
+
+  #ifdef SIX_DIGITS
+  if (!flash_45 || blinker_fast || S1_LONG) {
+    fillDigit(4, lightSensorCorrection  >> 4);
+    fillDigit(5, lightSensorCorrection & 0x0F);
+  }
+  #else
+  if (!flash_23 || blinker_fast || S1_LONG) {
+    fillDigit(2, lightSensorCorrection  >> 4);
+    fillDigit(3, lightSensorCorrection & 0x0F);
+  }
+  #endif
+}
+
 inline void displayBrightnessHigh() {
   fillDigit(0, LED_b);
   fillDigit(1, LED_h);
@@ -856,7 +872,11 @@ inline void displayScreen() {
     break;
 #endif
 
-  case DM_BRIGHTNESS_HIGH:
+  case DM_LIGHT_SENSOR_CORRECTION:
+    displayLightSensorCorrection();
+    break;
+
+    case DM_BRIGHTNESS_HIGH:
     displayBrightnessHigh();
     break;
 
@@ -918,7 +938,14 @@ inline void handleInactivityTimer(enum Event ev) {
     counter_inactivity = 0;
   }
 
-  if (counter_inactivity > 10) {
+  uint8_t debugScreensFlag = 0;
+#ifdef WITH_DEBUG_SCREENS
+  debugScreensFlag = (display_mode == DM_DEBUG_SCREEN_1) ||
+                     (display_mode == DM_DEBUG_SCREEN_2) ||
+                     (display_mode == DM_DEBUG_SCREEN_3);
+#endif
+
+  if (counter_inactivity > 10 && !debugScreensFlag) {
     counter_inactivity = 0;
 #ifdef WITH_NMEA
     if (display_mode == DM_NMEA_TIMEZONE || display_mode == DM_NMEA_DST ||
@@ -979,8 +1006,14 @@ inline void processADCValues() {
     uint8_t adcLight = getADCResult8(ADC_LIGHT);
     uint8_t lightvalMax = brightnessLow;
 
+    if (adcLight > lightSensorCorrection) {
+      adcLight -= lightSensorCorrection;
+    } else {
+      adcLight = 0;
+    }
+
     // Check for the night mode
-    if (adcLight >= LIGHT_SENSOR_NIGHT_TH) {
+    if (adcLight >= LIGHT_SENSOR_NIGHT_TH - lightSensorCorrection) {
       lightvalMax = brightnessNight;
     }
 
@@ -1198,7 +1231,7 @@ inline void handleButtonsSetMinute(enum Event ev) {
     backupNmeaValues();
     buttons_mode = K_NMEA_SET_TZ_HOUR;
 #else
-    buttons_mode = K_BRIGHTNESS_HIGH;
+    buttons_mode = K_LIGHT_SENSOR_CORRECTION;
 #endif
 #else
     buttons_mode = K_SET_HOUR_12_24;
@@ -1222,7 +1255,7 @@ inline void handleButtonsSetSecond6d(enum Event ev) {
     backupNmeaValues();
     buttons_mode = K_NMEA_SET_TZ_HOUR;
 #else
-    buttons_mode = K_BRIGHTNESS_HIGH;
+    buttons_mode = K_LIGHT_SENSOR_CORRECTION;
 #endif
 #else
     buttons_mode = K_SET_HOUR_12_24;
@@ -1242,7 +1275,7 @@ inline void handleButtonsSet12h24(enum Event ev) {
     backupNmeaValues();
     buttons_mode = K_NMEA_SET_TZ_HOUR;
 #else
-    buttons_mode = K_BRIGHTNESS_HIGH;
+    buttons_mode = K_LIGHT_SENSOR_CORRECTION;
 #endif
   }
 }
@@ -1311,10 +1344,31 @@ inline void handleButtonsNmeaSetAutoupdate(enum Event ev) {
     }
   } else if (ev == EV_S2_SHORT) {
     nmea_seconds_to_sync = NMEA_AUTOSYNC_DELAY;
-    buttons_mode = K_BRIGHTNESS_HIGH;
+    buttons_mode = K_LIGHT_SENSOR_CORRECTION;
   }
 }
 #endif
+
+inline void handleButtonsLightSensorCorrection(enum Event ev) {  
+  flash_23 = 1;
+  display_mode = DM_LIGHT_SENSOR_CORRECTION;
+  
+  if ((ev == EV_S1_SHORT) || (S1_LONG && blinker_fast)) {    
+    if (lightSensorCorrection < LIGHT_SENSOR_MAX_CORRECTION) {
+      lightSensorCorrection++;
+    } else {
+      lightSensorCorrection = 0;
+    }    
+  } else if (S2_LONG && blinker_fast) {
+    if (lightSensorCorrection > 0) {
+      lightSensorCorrection--;
+    } else {
+      lightSensorCorrection = LIGHT_SENSOR_MAX_CORRECTION;
+    }
+  } else if (ev == EV_S2_SHORT) {
+    buttons_mode = K_BRIGHTNESS_HIGH;
+  }
+}
 
 inline void handleButtonsBrightnessHigh(enum Event ev) {  
   flash_23 = 1;
@@ -1324,7 +1378,13 @@ inline void handleButtonsBrightnessHigh(enum Event ev) {
     if (brightnessHigh + 1 > brightnessLow) {
       brightnessHigh = BRIGHTNESS_HIGH_DEFAULT_VALUE;
     } else {
-      brightnessHigh += 1;
+      brightnessHigh++;
+    }
+  } else if (S2_LONG && blinker_fast) {
+    if (brightnessHigh > BRIGHTNESS_HIGH_DEFAULT_VALUE) {
+      brightnessHigh--;
+    } else {
+      brightnessHigh = brightnessLow - 1;
     }    
   } else if (ev == EV_S2_SHORT) {
     buttons_mode = K_BRIGHTNESS_LOW;
@@ -1336,10 +1396,16 @@ inline void handleButtonsBrightnessLow(enum Event ev) {
   display_mode = DM_BRIGHTNESS_LOW;
   
   if ((ev == EV_S1_SHORT) || (S1_LONG && blinker_fast)) {
-    if (brightnessHigh + 1 > BRIGHTNESS_LOW_MAX_VALUE) {
+    if (brightnessLow + 1 > BRIGHTNESS_LOW_MAX_VALUE) {
       brightnessLow = brightnessHigh;
     } else {
-      brightnessLow += 1;
+      brightnessLow++;
+    }    
+  } else if (S2_LONG && blinker_fast) {
+    if (brightnessLow + 1 > brightnessHigh) {
+      brightnessLow--;
+    } else {
+      brightnessLow = brightnessHigh + 1;
     }    
   } else if (ev == EV_S2_SHORT) {
     buttons_mode = K_BRIGHTNESS_NIGHT;
@@ -1354,7 +1420,7 @@ inline void handleButtonsBrightnessNight(enum Event ev) {
     if (brightnessNight + 1 > BRIGHTNESS_NIGHT_MAX_VALUE) {
       brightnessNight = brightnessHigh;
     } else {
-      brightnessNight += 1;
+      brightnessNight++;
     }    
   } else if (ev == EV_S2_SHORT) {
     saveSettings();
@@ -1675,6 +1741,10 @@ void handleButtonEvents(enum Event ev) {
     break;
 #endif
 
+  case K_LIGHT_SENSOR_CORRECTION:
+    handleButtonsLightSensorCorrection(ev);
+    break;
+
   case K_BRIGHTNESS_HIGH:
     handleButtonsBrightnessHigh(ev);
     break;
@@ -1820,6 +1890,7 @@ inline void loadBrightnessSettings() {
   brightnessHigh = (int8_t)IapReadByte(IAP_BRIGHTNESS_HIGH);
   brightnessLow = IapReadByte(IAP_BRIGHTNESS_LOW);
   brightnessNight = IapReadByte(IAP_BRIGHTNESS_NIGHT);
+  lightSensorCorrection = IapReadByte(IAP_LIGHT_SENSOR_CORR);
   
   if (brightnessHigh == 0xff) {
     brightnessHigh = BRIGHTNESS_HIGH_DEFAULT_VALUE;
@@ -1832,12 +1903,17 @@ inline void loadBrightnessSettings() {
   if (brightnessNight == 0xff) {
     brightnessNight = BRIGHTNESS_NIGHT_DEFAULT_VALUE;
   }
+
+  if (lightSensorCorrection == 0xff) {
+    lightSensorCorrection = LIGHT_SENSOR_DEFAULT_CORRECTION;
+  }
 }
 
 inline void saveBrightnessSettings() {
   IapProgramByte(IAP_BRIGHTNESS_HIGH, brightnessHigh);
   IapProgramByte(IAP_BRIGHTNESS_LOW, brightnessLow);
   IapProgramByte(IAP_BRIGHTNESS_NIGHT, brightnessNight);
+  IapProgramByte(IAP_LIGHT_SENSOR_CORR, lightSensorCorrection);
 }
 
 inline void saveSettings() {
