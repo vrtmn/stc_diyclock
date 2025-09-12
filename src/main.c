@@ -457,7 +457,7 @@ inline void displayTime() {
     }
 #endif
   }
-  fillDot(4, blinker_slow);
+  fillDot(4, display_mode == DM_NORMAL ? blinker_slow : 0);
 #endif
 
 #ifdef SIX_DIGITS
