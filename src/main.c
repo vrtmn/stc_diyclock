@@ -777,7 +777,32 @@ inline void displayTemperature() {
 }
 
 #ifdef WITH_DEBUG_SCREENS
-inline void displayDebug1() {
+inline void displayDebugLightSensorADCValue() {
+  // photoresistor adc and lightval
+  uint8_t adc = getADCResult8(ADC_LIGHT);
+  uint8_t lv = lightval;
+  fillDigit(0, adc >> 4);
+  fillDigit(1, adc & 0x0F);
+  fillDigit(2, lv >> 4);
+  fillDigit(3, lv & 0x0F);
+#ifdef SIX_DIGITS
+  fillDigit(5, 1);
+#endif
+}
+
+inline void displayDebugThermistorADCValue() {
+  // thermistor adc
+  uint16_t rt = getADCResult(ADC_TEMP);
+  fillDigit(0, rt >> 12);
+  fillDigit(1, rt >> 8 & 0x0F);
+  fillDigit(2, rt >> 4 & 0x0F);
+  fillDigit(3, rt & 0x0F);
+#ifdef SIX_DIGITS
+  fillDigit(5, 2);
+#endif
+}
+
+inline void displayDebugLoopCounter() {
   // seconds, loop counter, blinkers, S1/S2, keypress events
   uint8_t cc = count;
   if (S1_PRESSED || S2_PRESSED) {
@@ -791,31 +816,6 @@ inline void displayDebug1() {
   fillDigit(2, cc >> 4 & 0x0F);
   fillDigit(3, cc & 0x0F);
   fillDot(3, blinker_slow & blinker_fast);
-#ifdef SIX_DIGITS
-  fillDigit(5, 1);
-#endif
-}
-
-inline void displayDebug2() {
-  // photoresistor adc and lightval
-  uint8_t adc = getADCResult8(ADC_LIGHT);
-  uint8_t lv = lightval;
-  fillDigit(0, adc >> 4);
-  fillDigit(1, adc & 0x0F);
-  fillDigit(2, lv >> 4);
-  fillDigit(3, lv & 0x0F);
-#ifdef SIX_DIGITS
-  fillDigit(5, 2);
-#endif
-}
-
-inline void displayDebug3() {
-  // thermistor adc
-  uint16_t rt = getADCResult(ADC_TEMP);
-  fillDigit(0, rt >> 12);
-  fillDigit(1, rt >> 8 & 0x0F);
-  fillDigit(2, rt >> 4 & 0x0F);
-  fillDigit(3, rt & 0x0F);
 #ifdef SIX_DIGITS
   fillDigit(5, 3);
 #endif
@@ -920,14 +920,18 @@ inline void displayScreen() {
 
 #ifdef WITH_DEBUG_SCREENS
   case DM_DEBUG_SCREEN_1:
-    displayDebug1();
+    displayDebugLightSensorADCValue();
     break;
+#if NUMBER_OFDEBUG_SCREENS > 1
   case DM_DEBUG_SCREEN_2:
-    displayDebug2();
+    displayDebugThermistorADCValue();
     break;
+#if NUMBER_OFDEBUG_SCREENS > 2
   case DM_DEBUG_SCREEN_3:
-    displayDebug3();
+    displayDebugLoopCounter();
     break;
+#endif
+#endif
 #endif
   }
 }
@@ -1689,7 +1693,9 @@ S1 cycles through the DEBUG modes.
 To exit DEBUG mode, hold S1 and S2 again.
 */
 
+#if !defined(NUMBER_OF_DEBUG_SCREENS)
 #define NUMBER_OF_DEBUG_SCREENS 3
+#endif
 
 inline void handleDebugScreens(enum Event ev) {
   display_mode = DM_DEBUG_SCREEN_1 + buttons_mode - K_DEBUG_SCREEN_1;

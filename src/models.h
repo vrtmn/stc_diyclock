@@ -59,6 +59,7 @@ This file defines configurations for clock models.
 #define NMEA_DEVICE_SWITCH_PORT P3_1
 #define WITH_NMEA_DEVICE_SWITCH
 #define WITHOUT_H12_24_SWITCH
+#define NUMBER_OF_DEBUG_SCREENS 1
 #define WITH_DEBUG_SCREENS
 
 #elif defined(MOD6_MIN)
