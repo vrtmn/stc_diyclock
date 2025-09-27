@@ -11,7 +11,7 @@
  Symbol indices in the ledSymbols array
 */
 
-#define LED_BLANK   (LED_a + ('Z' - 'A') + 1)       // All segments are off
+#define LED_BLANK   (LED_a + ('F' - 'A') + 1)       // All segments are off
 #define LED_DASH    (LED_BLANK + 1)                 // '-'
 #define LED_dp      (LED_DASH + 1)                  // '.'
 #define LED_dp_mask 0b01101111                      // '.' - actual bit mask

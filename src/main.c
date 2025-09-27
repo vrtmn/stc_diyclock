@@ -646,12 +646,10 @@ inline void displayNmeaDST() {
 inline void displayNmeaAutoupdate() {
   fillDigit(1, BCD_DISPLAY_SETTINGS_3);
 
-  if (NMEA_AUTOSYNC_OFF != nmea_autosync) {
-    if (!flash_23 || blinker_fast || S1_LONG) {
-      fillDigit(2, nmea_autosync / 10);
-      fillDigit(3, nmea_autosync % 10);
+  if (NMEA_AUTOSYNC_OFF != nmea_autosync && blinker_fast || S1_LONG) {
+    fillDigit(2, nmea_autosync / 10);
+    fillDigit(3, nmea_autosync % 10);
     }
-  }
 }
 #elif defined(SIX_DIGITS) && !defined(BCD_DISPLAY)
 inline void displayNmeaAutoupdate() {
@@ -844,18 +842,17 @@ inline void displayTemperature() {
 #ifdef SIX_DIGITS
   fillDigit(2, ds_int2bcd_tens(temp));
   fillDigit(3, ds_int2bcd_ones(temp));
+  fillDot(4, 1);
 #ifdef BCD_DISPLAY
   if (CONF_C_F) {
     fillDigit(4, LED_f);
-    fillDigit(5, 9);
+    fillDigit(5, LED_c);
   } else {
     fillDigit(4, LED_f);
-    fillDigit(5, LED_c);
+    fillDigit(5, 9);
   }
-  fillDot(4, 1);
 #else
   fillDigit(4, CONF_C_F ? LED_f : LED_c);
-  fillDot(4, 1);
 #endif
 #else
   fillDigit(0, ds_int2bcd_tens(temp));
