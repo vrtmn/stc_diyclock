@@ -49,14 +49,10 @@ volatile enum {
     NMEA_READY
 } nmea_state = NMEA_NONE;
 
+#define NMEA_AUTOSYNC_OFF 0
+#define NMEA_AUTOSYNC_MAX_HOURS 24
 // Auto sync interval, hours
-volatile enum {
-    NMEA_AUTOSYNC_OFF = 0,
-    NMEA_AUTOSYNC_3H = 3,
-    NMEA_AUTOSYNC_6H = 6,
-    NMEA_AUTOSYNC_12H = 12,
-    NMEA_AUTOSYNC_24H = 24
-} nmea_autosync = NMEA_AUTOSYNC_OFF;
+volatile uint8_t nmea_autosync = NMEA_AUTOSYNC_OFF;
 
 #define IS_NMEA_AUTOSYNC_ON (nmea_autosync != NMEA_AUTOSYNC_OFF)
 #define SECONDS_IN_ONE_HOUR 3600
@@ -409,6 +405,6 @@ void nmea_load_tz(void) {
     nmea_tz_hr = 0;
     nmea_tz_min = 0;
     nmea_tz_dst = 0;
-    nmea_autosync = NMEA_AUTOSYNC_6H;
+    nmea_autosync = 3;  // 3 hours
   }
 }

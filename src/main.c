@@ -1425,22 +1425,10 @@ inline void handleButtonsNmeaSetDST(enum Event ev) {
 inline void handleButtonsNmeaSetAutoupdate(enum Event ev) {
   display_mode = DM_NMEA_AUTOUPDATE;
   if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast)) {
-    switch (nmea_autosync) {
-    case NMEA_AUTOSYNC_OFF:
-      nmea_autosync = NMEA_AUTOSYNC_3H;
-      break;
-    case NMEA_AUTOSYNC_3H:
-      nmea_autosync = NMEA_AUTOSYNC_6H;
-      break;
-    case NMEA_AUTOSYNC_6H:
-      nmea_autosync = NMEA_AUTOSYNC_12H;
-      break;
-    case NMEA_AUTOSYNC_12H:
-      nmea_autosync = NMEA_AUTOSYNC_24H;
-      break;
-    default:
+    if (nmea_autosync < NMEA_AUTOSYNC_MAX_HOURS) {
+      nmea_autosync += 1;    
+    } else {
       nmea_autosync = NMEA_AUTOSYNC_OFF;
-      break;
     }
   } else if (ev == EV_S2_SHORT) {
     nmea_seconds_to_sync = NMEA_AUTOSYNC_DELAY;
