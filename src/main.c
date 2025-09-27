@@ -617,7 +617,7 @@ inline void displayNmeaDST() {
 #endif
 
 #ifdef BCD_DISPLAY
-  if (!flash_45 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     if (nmea_tz_dst) {
       fillDigit(5, LED_f);
     } else {
@@ -625,7 +625,7 @@ inline void displayNmeaDST() {
     }
   }
 #elif defined(SIX_DIGITS) && !defined(BCD_DISPLAY)
-  if ((!flash_23 && !flash_45) || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     if (nmea_tz_dst) {
       fillDigit(4, LED_o);
       fillDigit(5, LED_n);
@@ -636,7 +636,7 @@ inline void displayNmeaDST() {
     }
   }
 #else
-  if (!flash_23 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     fillDigit(3, nmea_tz_dst);
   }
 #endif
@@ -657,7 +657,7 @@ inline void displayNmeaAutoupdate() {
   fillDigit(1, LED_p);
   fillDigit(2, LED_d);
 
-  if ((!flash_23 && !flash_45) || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     if (NMEA_AUTOSYNC_OFF == nmea_autosync) {
       fillDigit(3, 0);
       fillDigit(4, LED_f);
@@ -693,12 +693,12 @@ inline void displayLightSensorCorrection() {
 #endif
 
 #ifdef SIX_DIGITS
-  if (!flash_45 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     fillDigit(4, lightSensorCorrection  >> 4);
     fillDigit(5, lightSensorCorrection & 0x0F);
   }
 #else
-  if (!flash_23 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     fillDigit(2, lightSensorCorrection  >> 4);
     fillDigit(3, lightSensorCorrection & 0x0F);
   }
@@ -714,12 +714,12 @@ inline void displayBrightnessHigh() {
 #endif
   
   #ifdef SIX_DIGITS
-  if (!flash_45 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     fillDigit(4, brightnessHigh  >> 4);
     fillDigit(5, brightnessHigh & 0x0F);
   }
   #else
-  if (!flash_23 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     fillDigit(2, brightnessHigh  >> 4);
     fillDigit(3, brightnessHigh & 0x0F);
   }
@@ -735,12 +735,12 @@ inline void displayBrightnessLow() {
 #endif
 
   #ifdef SIX_DIGITS
-  if (!flash_45 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     fillDigit(4, brightnessLow  >> 4);
     fillDigit(5, brightnessLow & 0x0F);
   }
   #else
-  if (!flash_23 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     fillDigit(2, brightnessLow  >> 4);
     fillDigit(3, brightnessLow & 0x0F);
   }
@@ -756,12 +756,12 @@ inline void displayBrightnessNight() {
 #endif
 
   #ifdef SIX_DIGITS
-  if (!flash_45 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     fillDigit(4, brightnessNight  >> 4);
     fillDigit(5, brightnessNight & 0x0F);
   }
   #else
-  if (!flash_23 || blinker_fast || S1_LONG) {
+  if (blinker_fast || S1_LONG) {
     fillDigit(2, brightnessNight  >> 4);
     fillDigit(3, brightnessNight & 0x0F);
   }
@@ -1415,11 +1415,9 @@ inline void handleButtonsNmeaSetTimeZoneMinute(enum Event ev) {
 
 inline void handleButtonsNmeaSetDST(enum Event ev) {
   display_mode = DM_NMEA_DST;
-  flash_01 = flash_23 = 1;
   if (ev == EV_S1_SHORT || (S1_LONG && blinker_fast))
     nmea_tz_dst ^= 0x01;
   else if (ev == EV_S2_SHORT) {
-    flash_01 = flash_23 = 0;
     buttons_mode = K_NMEA_SET_AUTOUPDATE;
   }
 }
@@ -1452,7 +1450,6 @@ inline void handleButtonsNmeaSetAutoupdate(enum Event ev) {
 #endif
 
 inline void handleButtonsLightSensorCorrection(enum Event ev) {  
-  flash_23 = 1;
   display_mode = DM_LIGHT_SENSOR_CORRECTION;
   
   if ((ev == EV_S1_SHORT) || (S1_LONG && blinker_fast)) {    
@@ -1473,7 +1470,6 @@ inline void handleButtonsLightSensorCorrection(enum Event ev) {
 }
 
 inline void handleButtonsBrightnessHigh(enum Event ev) {  
-  flash_23 = 1;
   display_mode = DM_BRIGHTNESS_HIGH;
   
   if ((ev == EV_S1_SHORT) || (S1_LONG && blinker_fast)) {
@@ -1494,7 +1490,6 @@ inline void handleButtonsBrightnessHigh(enum Event ev) {
 }
 
 inline void handleButtonsBrightnessLow(enum Event ev) {  
-  flash_23 = 1;
   display_mode = DM_BRIGHTNESS_LOW;
   
   if ((ev == EV_S1_SHORT) || (S1_LONG && blinker_fast)) {
@@ -1515,7 +1510,6 @@ inline void handleButtonsBrightnessLow(enum Event ev) {
 }
 
 inline void handleButtonsBrightnessNight(enum Event ev) {  
-  flash_23 = 1;
   display_mode = DM_BRIGHTNESS_NIGHT;
   
   if ((ev == EV_S1_SHORT) || (S1_LONG && blinker_fast)) {
