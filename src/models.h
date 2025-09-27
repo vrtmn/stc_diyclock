@@ -106,6 +106,8 @@ This file defines configurations for clock models.
 #define MAP_SW2_TO_P1_4
 #define NMEA_DEVICE_SWITCH_PORT P3_1
 #define WITH_NMEA_DEVICE_SWITCH
+#define WITH_DEBUG_SCREENS
+#define NUMBER_OF_DEBUG_SCREENS 1
 
 #endif  
 

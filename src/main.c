@@ -12,6 +12,15 @@
 #include "eeprom_consts.h"
 #ifdef BCD_DISPLAY
 #include "led_bcd.h"
+
+#define BCD_DISPLAY_SETTINGS_1 1
+#define BCD_DISPLAY_SETTINGS_2 2
+#define BCD_DISPLAY_SETTINGS_3 3
+#define BCD_DISPLAY_SETTINGS_4 4
+#define BCD_DISPLAY_SETTINGS_5 5
+#define BCD_DISPLAY_SETTINGS_6 6
+#define BCD_DISPLAY_SETTINGS_7 7
+
 #elif defined(HW_REVISION_CUSTOM_PCB)
 #include "led_pcb_v2.h"
 #else
@@ -66,6 +75,9 @@ volatile __bit blinker_fast;
 volatile __bit loop_gate;
 
 #ifdef SYMBOLS_TEST
+#define SYMBOLS_TEST_BCD_MAX_VALUE 15
+#define SYMBOLS_TEST_BCD_COLUMNS 6
+
 volatile int8_t counter_symbols_test = 0;
 #endif
 
@@ -187,13 +199,12 @@ inline void timer1sec() {
 #endif
 
 #ifdef SYMBOLS_TEST
-#ifdef BCD_DISPLAY
   counter_symbols_test++;
-  if (counter_symbols_test > 9) {
+#ifdef BCD_DISPLAY
+  if (counter_symbols_test > (SYMBOLS_TEST_BCD_MAX_VALUE + SYMBOLS_TEST_BCD_COLUMNS - 1)) {
     counter_symbols_test = 0;
   }
 #else
-  counter_symbols_test++;
   if (counter_symbols_test > sizeof(ledSymbolsRev) / sizeof(uint8_t) - 1) {
     counter_symbols_test = 0;
   }
@@ -519,7 +530,29 @@ inline void display12h24h() {
 #endif
 
 #ifdef WITH_NMEA
-#ifdef SIX_DIGITS
+#ifdef BCD_DISPLAY
+inline void displayNmeaTimeZone() {
+  fillDigit(1, BCD_DISPLAY_SETTINGS_1);
+  int8_t hh = nmea_tz_hr;
+  if (hh < 0) {
+    hh = -hh;
+    fillDot(3, 1);
+  }
+  fillDot(3, 1);
+  fillDot(4, 1);
+
+  if (!flash_01 || blinker_fast || S1_LONG) {
+    if (hh >= 10) {
+      fillDigit(2, 1);
+    }
+    fillDigit(3, hh % 10);
+  }
+  if (!flash_23 || blinker_fast || S1_LONG) {
+    fillDigit(4, nmea_tz_min / 10);
+    fillDigit(5, nmea_tz_min % 10);
+  }
+}
+#elif defined(SIX_DIGITS)
 inline void displayNmeaTimeZone() {
   fillDigit(0, LED_t);
   int8_t hh = nmea_tz_hr;
@@ -575,38 +608,67 @@ inline void displayNmeaTimeZone() {
 #endif
 
 inline void displayNmeaDST() {
+#ifdef BCD_DISPLAY
+  fillDigit(1, BCD_DISPLAY_SETTINGS_2);
+#else
   fillDigit(0, LED_d);
   fillDigit(1, LED_s);
   fillDigit(2, LED_t);
+#endif
 
-#ifdef SIX_DIGITS
-  if (nmea_tz_dst) {
-    fillDigit(4, LED_o);
-    fillDigit(5, LED_n);
-  } else {
-    fillDigit(3, LED_o);
-    fillDigit(4, LED_f);
-    fillDigit(5, LED_f);
+#ifdef BCD_DISPLAY
+  if (!flash_45 || blinker_fast || S1_LONG) {
+    if (nmea_tz_dst) {
+      fillDigit(5, LED_f);
+    } else {
+      fillDigit(5, LED_BLANK);
+    }
+  }
+#elif defined(SIX_DIGITS) && !defined(BCD_DISPLAY)
+  if ((!flash_23 && !flash_45) || blinker_fast || S1_LONG) {
+    if (nmea_tz_dst) {
+      fillDigit(4, LED_o);
+      fillDigit(5, LED_n);
+    } else {
+      fillDigit(3, LED_o);
+      fillDigit(4, LED_f);
+      fillDigit(5, LED_f);
+    }
   }
 #else
-  fillDigit(3, nmea_tz_dst);
+  if (!flash_23 || blinker_fast || S1_LONG) {
+    fillDigit(3, nmea_tz_dst);
+  }
 #endif
 }
 
-#ifdef SIX_DIGITS
+#ifdef BCD_DISPLAY
+inline void displayNmeaAutoupdate() {
+  fillDigit(1, BCD_DISPLAY_SETTINGS_3);
+
+  if (NMEA_AUTOSYNC_OFF != nmea_autosync) {
+    if (!flash_23 || blinker_fast || S1_LONG) {
+      fillDigit(2, nmea_autosync / 10);
+      fillDigit(3, nmea_autosync % 10);
+    }
+  }
+}
+#elif defined(SIX_DIGITS) && !defined(BCD_DISPLAY)
 inline void displayNmeaAutoupdate() {
   fillDigit(0, LED_u);
   fillDigit(1, LED_p);
   fillDigit(2, LED_d);
 
-  if (NMEA_AUTOSYNC_OFF == nmea_autosync) {
-    fillDigit(3, 0);
-    fillDigit(4, LED_f);
-    fillDigit(5, LED_f);
-  } else {
-    fillDigit(3, nmea_autosync / 10);
-    fillDigit(4, nmea_autosync % 10);
-    fillDigit(5, LED_h);
+  if ((!flash_23 && !flash_45) || blinker_fast || S1_LONG) {
+    if (NMEA_AUTOSYNC_OFF == nmea_autosync) {
+      fillDigit(3, 0);
+      fillDigit(4, LED_f);
+      fillDigit(5, LED_f);
+    } else {
+      fillDigit(3, nmea_autosync / 10);
+      fillDigit(4, nmea_autosync % 10);
+      fillDigit(5, LED_h);
+    }
   }
 }
 #else
@@ -624,26 +686,34 @@ inline void displayNmeaAutoupdate() {
 #endif
 #endif
 
-inline void displayLightSensorCorrection() {  
+inline void displayLightSensorCorrection() {
+#ifdef BCD_DISPLAY
+  fillDigit(1, BCD_DISPLAY_SETTINGS_4);
+#else
   fillDigit(0, LED_s);
   fillDigit(1, LED_c);
+#endif
 
-  #ifdef SIX_DIGITS
+#ifdef SIX_DIGITS
   if (!flash_45 || blinker_fast || S1_LONG) {
     fillDigit(4, lightSensorCorrection  >> 4);
     fillDigit(5, lightSensorCorrection & 0x0F);
   }
-  #else
+#else
   if (!flash_23 || blinker_fast || S1_LONG) {
     fillDigit(2, lightSensorCorrection  >> 4);
     fillDigit(3, lightSensorCorrection & 0x0F);
   }
-  #endif
+#endif
 }
 
 inline void displayBrightnessHigh() {
+#ifdef BCD_DISPLAY
+  fillDigit(1, BCD_DISPLAY_SETTINGS_5);
+#else
   fillDigit(0, LED_b);
   fillDigit(1, LED_h);
+#endif
   
   #ifdef SIX_DIGITS
   if (!flash_45 || blinker_fast || S1_LONG) {
@@ -659,8 +729,12 @@ inline void displayBrightnessHigh() {
 }
 
 inline void displayBrightnessLow() {
+#ifdef BCD_DISPLAY
+  fillDigit(1, BCD_DISPLAY_SETTINGS_6);
+#else
   fillDigit(0, LED_b);
   fillDigit(1, LED_l);
+#endif
 
   #ifdef SIX_DIGITS
   if (!flash_45 || blinker_fast || S1_LONG) {
@@ -676,8 +750,12 @@ inline void displayBrightnessLow() {
 }
 
 inline void displayBrightnessNight() {
+#ifdef BCD_DISPLAY
+  fillDigit(1, BCD_DISPLAY_SETTINGS_7);
+#else
   fillDigit(0, LED_b);
   fillDigit(1, LED_n);
+#endif
 
   #ifdef SIX_DIGITS
   if (!flash_45 || blinker_fast || S1_LONG) {
@@ -766,8 +844,19 @@ inline void displayTemperature() {
 #ifdef SIX_DIGITS
   fillDigit(2, ds_int2bcd_tens(temp));
   fillDigit(3, ds_int2bcd_ones(temp));
+#ifdef BCD_DISPLAY
+  if (CONF_C_F) {
+    fillDigit(4, LED_f);
+    fillDigit(5, 9);
+  } else {
+    fillDigit(4, LED_f);
+    fillDigit(5, LED_c);
+  }
+  fillDot(4, 1);
+#else
   fillDigit(4, CONF_C_F ? LED_f : LED_c);
   fillDot(4, 1);
+#endif
 #else
   fillDigit(0, ds_int2bcd_tens(temp));
   fillDigit(1, ds_int2bcd_ones(temp));
@@ -824,11 +913,23 @@ inline void displayDebugLoopCounter() {
 
 #ifdef SYMBOLS_TEST
 inline void displaySymbolsTest() {
+#ifdef BCD_DISPLAY
+  if (counter_symbols_test > SYMBOLS_TEST_BCD_MAX_VALUE) {
+    uint8_t column = counter_symbols_test - SYMBOLS_TEST_BCD_MAX_VALUE - 1;
+    fillDigit(column, LED_f);
+    fillDot(column, blinker_slow);
+  } else {
+    for (int n = 0; n < NUMBER_OF_DIGITS; n++) {
+      fillDigit(n, counter_symbols_test);
+      fillDot(n, blinker_slow);
+    }
+  }
+#else
   for (int n = 0; n < NUMBER_OF_DIGITS; n++) {
     fillDigit(n, counter_symbols_test);
     fillDot(n, blinker_slow);
   }
-  return;
+#endif
 }
 #endif
 

@@ -9,11 +9,6 @@
 
 /*
  Symbol indices in the ledSymbols array
-
- Note:
- BCD clock is not supposed to display letters, but they are still defined
- in the table for backward compatibility of the codebase.
- All symbols except the digits ('0'-'9') and the dot are defined as 'blank' (all LEDs off).
 */
 
 #define LED_BLANK   (LED_a + ('Z' - 'A') + 1)       // All segments are off
@@ -27,14 +22,6 @@
 #define LED_d       (LED_a + ('D' - 'A'))
 #define LED_e       (LED_a + ('E' - 'A'))
 #define LED_f       (LED_a + ('F' - 'A'))
-#define LED_h       (LED_a + ('H' - 'A'))
-#define LED_l       (LED_a + ('L' - 'A'))
-#define LED_n       (LED_a + ('N' - 'A'))
-#define LED_o       (LED_a + ('O' - 'A'))
-#define LED_p       (LED_a + ('P' - 'A'))
-#define LED_s       (LED_a + ('S' - 'A'))
-#define LED_t       (LED_a + ('T' - 'A'))
-#define LED_u       (LED_a + ('U' - 'A'))
 
 const uint8_t
 #if !defined(WITHOUT_LEDTABLE_RELOC)
@@ -53,34 +40,14 @@ ledSymbols[]
     0b11110001, // 7
     0b11111110, // 8
     0b11110110, // 9
-    0b11111111, // A
-    0b11111111, // b
-    0b11111111, // C
-    0b11111111, // d
-    0b11111111, // E
-    0b11111111, // F
-    0b11111111, // G
-    0b11111111, // H
-    0b11111111, // I
-    0b11111111, // J
-    0b11111111, // K
-    0b11111111, // L
-    0b11111111, // M
-    0b11111111, // N
-    0b11111111, // O
-    0b11111111, // P
-    0b11111111, // Q
-    0b11111111, // R
-    0b11111111, // S
-    0b11111111, // T
-    0b11111111, // U
-    0b11111111, // V
-    0b11111111, // W
-    0b11111111, // X
-    0b11111111, // Y
-    0b11111111, // Z
+    0b11111010, // 10 (hex A)
+    0b11110010, // 11 (hex B)
+    0b11111100, // 12 (hex C)
+    0b11110100, // 13 (hex D)
+    0b11111000, // 14 (hex E)
+    0b11110000, // 15 (hex F)
     0b11111111, // ' ' - blank
-    0b11111111, // '-' - dash
+    LED_dp_mask, // '-' - dash
     LED_dp_mask, // '.' - dot
 };
 
