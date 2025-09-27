@@ -97,7 +97,7 @@ This file defines configurations for clock models.
 #define BCD_DISPLAY
 #define HW_REVISION_A
 #define SIX_DIGITS
-#define WITHOUT_DATE
+#define AUTO_SHOW_TEMPERATURE 
 #define WITHOUT_CHIME
 #define WITHOUT_ALARM
 #define WITHOUT_WEEKDAY
