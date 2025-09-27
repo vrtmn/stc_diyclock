@@ -1,5 +1,5 @@
 #include <WiFiManager.h>
-#include <NTPClient.h>
+#include "NTPClient.h"
 
 WiFiManager wifiManager;
 WiFiUDP ntpUDP;
@@ -36,16 +36,28 @@ void loop() {
   }
 
   attemptCounter = 0;
-  
-  String msg = makeNMEAString();
-  Serial.println(msg);
 
-  // The board will be powered off once the synchronization is complete, 
-  // so there is no particular point in this delay.
-  delay(60 * 60 * 1000);
+  if (timeClient.getSeconds() < 59) {
+    bool addOneSecond = false;
+    int msec = timeClient.getMilliseconds();
+    // Wait until the beginning of the next second
+    if (msec > 0 && msec < 1000) {
+      unsigned long syncValue = 1000 - msec;
+      delay(syncValue);
+      addOneSecond = true;
+      // String temp = "added second. msec=" + String(msec);
+      // Serial.println(temp);
+    }
+
+    String msg = makeNMEAString(addOneSecond);
+    Serial.println(msg);
+
+    // The board will be powered off once the synchronization is complete
+    delay(60 * 60 * 1000);
+  }
 }
 
-String makeNMEAString() {
+String makeNMEAString(bool addOneSecond) {
   time_t epochTime = timeClient.getEpochTime();
   struct tm *ptm = gmtime((time_t *)&epochTime);
 
@@ -53,9 +65,8 @@ String makeNMEAString() {
   int month = ptm->tm_mon + 1;
   int year = ptm->tm_year + 1900;
 
-  String time = timeClient.getFormattedTime();
-  time.replace(":", "");
-
+  String time = getFormattedTime(timeClient, addOneSecond);
+  
   char date[7];
   snprintf(date, sizeof(date), "%02d%02d%02d", day, month, year % 100);
 
@@ -84,6 +95,23 @@ String makeNMEAString() {
   snprintf(crcString, sizeof(crcString), "%02X", crc);
 
   return "$" + msg + "*" + crcString;
+}
+
+String getFormattedTime(NTPClient timeClient, bool addOneSecond) {
+  unsigned long rawTime = timeClient.getEpochTime();
+  unsigned long hours = (rawTime % 86400L) / 3600;
+  String hoursStr = hours < 10 ? "0" + String(hours) : String(hours);
+
+  unsigned long minutes = (rawTime % 3600) / 60;
+  String minuteStr = minutes < 10 ? "0" + String(minutes) : String(minutes);
+
+  unsigned long seconds = rawTime % 60;
+  if (addOneSecond) {
+    seconds += 1;
+  }
+  String secondStr = seconds < 10 ? "0" + String(seconds) : String(seconds);
+
+  return hoursStr + minuteStr + secondStr;
 }
 
 byte calculateCRC(String nmea) {
